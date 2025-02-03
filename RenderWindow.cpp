@@ -289,7 +289,7 @@ void RenderWindow::initSwapChainResources()
     mProjectionMatrix.perspective(25.0f,          sz.width() / (float) sz.height(), 0.01f, 100.0f);
     //Camera is -4 away from origo
     /**PLAY WITH THIS**/
-    mProjectionMatrix.translate(0, 0, -10);
+    mProjectionMatrix.translate(0, 0, -5);
 
     //Flip projection because of Vulkan's -Y axis
     mProjectionMatrix.scale(1.0f, -1.0f, 1.0);
@@ -347,9 +347,9 @@ void RenderWindow::startNextFrame()
 
     //Set model matrix for first triangle
     //We make a temp of this to not mess up the original matrix
-    QMatrix4x4 tempMatrix = mProjectionMatrix;
-    tempMatrix.translate(-0.7f, 0, 0);
-    tempMatrix.rotate(mRotation, 0, 1, 0);
+    //QMatrix4x4 tempMatrix = mProjectionMatrix;
+    //tempMatrix.translate(-0.7f, 0, 0);
+    //tempMatrix.rotate(mRotation, 0, 1, 0);
 
     for (auto it=mObjects.begin(); it!=mObjects.end(); it++)
     {
