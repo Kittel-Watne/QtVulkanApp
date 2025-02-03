@@ -28,13 +28,24 @@ static inline VkDeviceSize aligned(VkDeviceSize v, VkDeviceSize byteAlign)
 RenderWindow::RenderWindow(QVulkanWindow *w, bool msaa)
 	: mWindow(w)
 {
-    //file:///C:/Users/Kittel/Documents/Spillskolen/3DMatteProg/CreateFileComp1/build/Desktop_Qt_6_8_1_MSVC2022_64bit-Debug/ApesadelFile.txt
-    std::string apesadelFile = "C:/Users/Kittel/Documents/Spillskolen/3DMatteProg/CreateFileComp1/build/Desktop_Qt_6_8_1_MSVC2022_64bit-Debug/ApesadelFile.txt";
+    //C:/Users/Kittel/Documents/Spillskolen/3DMatteProg/CreateFileComp1/build/Desktop_Qt_6_8_1_MSVC2022_64bit-Debug/ApesadelFile.txt
+    //std::string apesadelFile = "C:/Users/Kittel/Documents/Spillskolen/3DMatteProg/CreateFileComp1/build/Desktop_Qt_6_8_1_MSVC2022_64bit-Debug/ApesadelFile.txt";
+    std::string helixFile = "C:/Users/Kittel/Documents/Spillskolen/3DMatteProg/CreateFileComp1/build/Desktop_Qt_6_8_1_MSVC2022_64bit-Debug/HelixFile.txt";
+    //std::string functionFile = "C:/Users/Kittel/Documents/Spillskolen/3DMatteProg/CreateFileComp1/build/Desktop_Qt_6_8_1_MSVC2022_64bit-Debug/FunctionFile.txt";
 
     //mObjects.push_back(new VkTriangle());
     //mObjects.push_back((new VkTriangleSurface()));
-    VisualObject* apesadel = new VkTriangleSurface(apesadelFile);
-    mObjects.push_back(apesadel);
+
+    //VisualObject* apesadel = new VkTriangleSurface(apesadelFile);
+    //mObjects.push_back(apesadel);
+
+    VisualObject* helix = new VkTriangleSurface(helixFile);
+    mObjects.push_back(helix);
+
+
+    //VisualObject* funct = new VkTriangleSurface(functionFile);
+    //mObjects.push_back(funct);
+
 
 }
 
@@ -206,7 +217,7 @@ void RenderWindow::initResources()
     VkPipelineInputAssemblyStateCreateInfo ia;
     memset(&ia, 0, sizeof(ia));
     ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    ia.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
     pipelineInfo.pInputAssemblyState = &ia;
 
     // The viewport and scissor will be set dynamically via vkCmdSetViewport/Scissor.
@@ -294,7 +305,7 @@ void RenderWindow::initSwapChainResources()
     mProjectionMatrix.perspective(25.0f,          sz.width() / (float) sz.height(), 0.01f, 100.0f);
     //Camera is -4 away from origo
     /**PLAY WITH THIS**/
-    mProjectionMatrix.translate(0, 1, -30);
+    mProjectionMatrix.translate(0, 1, -20);
 
     //Flip projection because of Vulkan's -Y axis
     mProjectionMatrix.scale(1.0f, -1.0f, 1.0);
