@@ -24,20 +24,26 @@ VkTriangleSurface::VkTriangleSurface(const std::string &filename)
     // read input from math part of compulsory
     int n;
     Vertex v;
-    std::vector<Vertex> preFormatVertices;
+    //This one is used for the Apesadel
+    //std::vector<Vertex> preFormatVertices;
 
     inn >> n;
     qDebug() << n;
     for (int i=0; i<n; i++)
     {
         inn >> v;
-        preFormatVertices.push_back(v);
+        //This one is used for the Apesadel
+        //preFormatVertices.push_back(v);
+
+        mVertices.push_back(v);
         qDebug() << v.x << v.y << v.z;
     }
     inn.close();
 
     n = sqrt(n);
 
+    //This is to order the matrices properly for the Apesadel
+/*
     for (int i = 0; i<n-1; i++) {
         for(int j = 1; j<n; j++) {
             mVertices.push_back(preFormatVertices[i*n + j]);
@@ -48,16 +54,6 @@ VkTriangleSurface::VkTriangleSurface(const std::string &filename)
             mVertices.push_back(preFormatVertices[i*n + j + n]);
             mVertices.push_back(preFormatVertices[i*n + j - 1 + n]);
         }
-    }/*
-
-        for(int i = 1; i<n; i++) {
-            mVertices.push_back(preFormatVertices[i]);
-            mVertices.push_back(preFormatVertices[i - 1 + n]);
-            mVertices.push_back(preFormatVertices[i - 1]);
-
-            mVertices.push_back(preFormatVertices[i]);
-            mVertices.push_back(preFormatVertices[i + n]);
-            mVertices.push_back(preFormatVertices[i - 1 + n]);
-        }
-        qDebug() << "FIN" << n;*/
+    }
+*/
 }
