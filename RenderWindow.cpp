@@ -28,9 +28,14 @@ static inline VkDeviceSize aligned(VkDeviceSize v, VkDeviceSize byteAlign)
 RenderWindow::RenderWindow(QVulkanWindow *w, bool msaa)
 	: mWindow(w)
 {
-    //
-    mObjects.push_back(new VkTriangle());
-    mObjects.push_back((new VkTriangleSurface()));
+    //file:///C:/Users/Kittel/Documents/Spillskolen/3DMatteProg/CreateFileComp1/build/Desktop_Qt_6_8_1_MSVC2022_64bit-Debug/ApesadelFile.txt
+    std::string apesadelFile = "C:/Users/Kittel/Documents/Spillskolen/3DMatteProg/CreateFileComp1/build/Desktop_Qt_6_8_1_MSVC2022_64bit-Debug/ApesadelFile.txt";
+
+    //mObjects.push_back(new VkTriangle());
+    //mObjects.push_back((new VkTriangleSurface()));
+    VisualObject* apesadel = new VkTriangleSurface(apesadelFile);
+    mObjects.push_back(apesadel);
+
 }
 
 void RenderWindow::initResources()
@@ -56,9 +61,9 @@ void RenderWindow::initResources()
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO; // Set the structure type
 
 
-        for (auto it=mObjects.begin(); it!=mObjects.end(); it++)
+    for(VisualObject* it : mObjects)
     {
-        createBuffer(logicalDevice, uniAlign, *it);
+        createBuffer(logicalDevice, uniAlign, it);
     }
 
 
@@ -289,7 +294,7 @@ void RenderWindow::initSwapChainResources()
     mProjectionMatrix.perspective(25.0f,          sz.width() / (float) sz.height(), 0.01f, 100.0f);
     //Camera is -4 away from origo
     /**PLAY WITH THIS**/
-    mProjectionMatrix.translate(0, 0, -10);
+    mProjectionMatrix.translate(0, 1, -30);
 
     //Flip projection because of Vulkan's -Y axis
     mProjectionMatrix.scale(1.0f, -1.0f, 1.0);
@@ -358,7 +363,6 @@ void RenderWindow::startNextFrame()
         mDeviceFunctions->vkCmdDraw(cmdBuf, (*it)->mVertices.size(), 1, 0, 0);
     }
 
-
     //Push the model matrix to the shader and draw the triangle
     //setModelMatrix(tempMatrix);
     //mDeviceFunctions->vkCmdDraw(cmdBuf, 3, 1, 0, 0);
@@ -381,7 +385,7 @@ void RenderWindow::startNextFrame()
     mWindow->requestUpdate(); // render continuously, throttled by the presentation rate
 
 
-    mRotation += 1.0f; //set for next frame
+    mRotation += 0.0f; //set for next frame
 }
 
 VkShaderModule RenderWindow::createShader(const QString &name)

@@ -15,6 +15,8 @@ qt_add_executable(QtVulkanApp
     vertex.cpp vertex.h
     vktriangle.h vktriangle.cpp
     vktrianglesurface.h vktrianglesurface.cpp
+    FunctionFile HelixFile
+    ApesadelFile.txt
 )
 # Define the shader files
 set(SHADER_FILES

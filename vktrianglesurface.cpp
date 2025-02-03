@@ -17,8 +17,47 @@ VkTriangleSurface::VkTriangleSurface() : VisualObject()
 
 VkTriangleSurface::VkTriangleSurface(const std::string &filename)
 {
+    qDebug() << "HERE!!!!\n";
     std::ifstream inn(filename);
     if (!inn.is_open())
         return;
     // read input from math part of compulsory
+    int n;
+    Vertex v;
+    std::vector<Vertex> preFormatVertices;
+
+    inn >> n;
+    qDebug() << n;
+    for (int i=0; i<n; i++)
+    {
+        inn >> v;
+        preFormatVertices.push_back(v);
+        qDebug() << v.x << v.y << v.z;
+    }
+    inn.close();
+
+    n = sqrt(n);
+
+    for (int i = 0; i<n-1; i++) {
+        for(int j = 1; j<n; j++) {
+            mVertices.push_back(preFormatVertices[i*n + j]);
+            mVertices.push_back(preFormatVertices[i*n + j - 1 + n]);
+            mVertices.push_back(preFormatVertices[i*n + j - 1]);
+
+            mVertices.push_back(preFormatVertices[i*n + j]);
+            mVertices.push_back(preFormatVertices[i*n + j + n]);
+            mVertices.push_back(preFormatVertices[i*n + j - 1 + n]);
+        }
+    }/*
+
+        for(int i = 1; i<n; i++) {
+            mVertices.push_back(preFormatVertices[i]);
+            mVertices.push_back(preFormatVertices[i - 1 + n]);
+            mVertices.push_back(preFormatVertices[i - 1]);
+
+            mVertices.push_back(preFormatVertices[i]);
+            mVertices.push_back(preFormatVertices[i + n]);
+            mVertices.push_back(preFormatVertices[i - 1 + n]);
+        }
+        qDebug() << "FIN" << n;*/
 }
