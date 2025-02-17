@@ -6,7 +6,7 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
 qt_standard_project_setup()
 
 qt_add_executable(QtVulkanApp
-    RenderWindow.cpp RenderWindow.h
+    Renderer.cpp Renderer.h
     MainWindow.cpp MainWindow.h
     main.cpp
 
