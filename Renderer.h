@@ -79,12 +79,8 @@ private:
     void createBuffer(VkDevice logicalDevice,
                       const VkDeviceSize uniAlign, VisualObject* visualObject,
                       VkBufferUsageFlags usage=VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-    //VkBuffer& buffer,
-    //VkDeviceMemory& bufferMemory) ;
+
     Camera mCamera;
-    //VkDevice logicalDevice;
-    //VkPipelineInputAssemblyStateCreateInfo ia;
-    //VkGraphicsPipelineCreateInfo pipelineInfo;
 };
 
 #endif // RENDERER_H

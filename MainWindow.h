@@ -13,6 +13,7 @@ class QMenuBar;
 class QAction;
 class QDialogButtonBox;
 
+//The class that holds the whole GUI of the application
 class MainWindow : public QWidget
 {
     Q_OBJECT

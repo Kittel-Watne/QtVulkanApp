@@ -30,9 +30,10 @@ Renderer::Renderer(QVulkanWindow *w, bool msaa)
     mObjects.push_back((new TriangleSurface()));
     mObjects.push_back((new WorldAxis()));
     // Dag 030225
-    mObjects.at(0)->setName("triangel");
-    mObjects.at(1)->setName("surf");
-    mObjects.at(2)->setName("Axis");
+    mObjects.at(0)->setName("tri");
+    mObjects.at(1)->setName("quad");
+    mObjects.at(2)->setName("axis");
+
     // **************************************
     // Legger inn objekter i map
     // **************************************

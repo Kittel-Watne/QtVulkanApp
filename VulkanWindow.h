@@ -19,7 +19,7 @@ public:
     VulkanWindow();
 
     QVulkanWindowRenderer* createRenderer() override;
-    QVulkanWindowRenderer* getRenderWindow() const { return mRenderWindow; }
+    QVulkanWindowRenderer* getRenderWindow() const { return mRenderer; }
     void setSelectedObject(VisualObject* object) { mSelectedObject = object; }
 
 signals:
@@ -28,9 +28,6 @@ signals:
 protected:
     //The QVulkanWindow is a QWindow that we inherit from and have these functions
     // to capture mouse and keyboard.
-    // Uncomment to use (you also have to make the definitions of
-    // these functions in the cpp-file to use them of course!)
-    //
     void mousePressEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
@@ -38,7 +35,7 @@ protected:
     void keyReleaseEvent(QKeyEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
 
-    QVulkanWindowRenderer* mRenderWindow{ nullptr };
+    QVulkanWindowRenderer* mRenderer{ nullptr };
     VisualObject* mSelectedObject{ nullptr };
     int mIndex{0};
 
@@ -50,4 +47,5 @@ private:
     int mMouseYlast{0};
 
 };
+
 #endif // VULKANWINDOW_H

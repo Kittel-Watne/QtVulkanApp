@@ -99,10 +99,6 @@ QMenuBar *MainWindow::createMenu()
     connect(openFileAction, &QAction::triggered, this, &MainWindow::openFile);
     connect(exitAction, &QAction::triggered, qApp, &QCoreApplication::quit);
 
-    //   editMenu = new QMenu(this);
-    //   editNameAction = editMenu->addAction(tr("&Enter name..."));
-    //   menuBar->addMenu(editMenu);
-    //   editMenu->setVisible(true);
     return menuBar;
 }
 void MainWindow::openFile() // slot
@@ -110,9 +106,6 @@ void MainWindow::openFile() // slot
     auto filnavn = QFileDialog::getOpenFileName(this);
     if (!filnavn.isEmpty())
     {
-        //QString tekst;
-        //loadFile(filnavn, tekst);
-        //textEdit->setPlainText(tekst);
         TriangleSurface* surf = new TriangleSurface(filnavn.toStdString());
         auto rw = dynamic_cast<Renderer*>(mVulkanWindow->getRenderWindow());
         rw->getObjects().push_back(surf);
@@ -140,6 +133,5 @@ void MainWindow::selectName()
         msgBox.setText("Finner ikke " + QString(mSelectedName.c_str()));
         msgBox.setIcon(QMessageBox::Warning);
         msgBox.setDefaultButton(QMessageBox::Close);
-        // int ret = msgBox.exec();
     }
 }

@@ -3,6 +3,7 @@
 
 #include "VisualObject.h"
 
+//Simple 3-axis mesh
 class WorldAxis : public VisualObject
 {
 public:
