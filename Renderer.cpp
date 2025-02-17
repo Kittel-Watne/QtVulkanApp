@@ -10,7 +10,6 @@ static inline VkDeviceSize aligned(VkDeviceSize v, VkDeviceSize byteAlign)
 
 
 /*** Renderer class ***/
-
 Renderer::Renderer(QVulkanWindow *w, bool msaa)
 	: mWindow(w)
 {
@@ -26,8 +25,8 @@ Renderer::Renderer(QVulkanWindow *w, bool msaa)
         }
     }
     // Dag 230125
-    mObjects.push_back(new VkTriangle());
-    mObjects.push_back((new VkTriangleSurface()));
+    mObjects.push_back(new Triangle());
+    mObjects.push_back((new TriangleSurface()));
     // Dag 030225
     mObjects.at(0)->setName("triangel");
     mObjects.at(1)->setName("surf");

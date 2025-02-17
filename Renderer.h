@@ -1,14 +1,13 @@
-#ifndef RENDERWINDOW_H
-#define RENDERWINDOW_H
+#ifndef RENDERER_H
+#define RENDERER_H
 
 #include <QVulkanWindow>
 #include <vector>
 #include <unordered_map>
-#include "VkCamera.h"
-#include "VkTriangle.h"
-#include "VkTrianglesurface.h"
+#include "Camera.h"
+#include "Triangle.h"
+#include "TriangleSurface.h"
 #include "VisualObject.h"
-#include "VkTriangleSurface.h"
 
 class Renderer : public QVulkanWindowRenderer
 {
@@ -71,8 +70,8 @@ protected:
 
 private:
     friend class VulkanWindow;
-    VkTriangle mTriangle;
-    VkTriangleSurface mSurface;
+    Triangle mTriangle;
+    TriangleSurface mSurface;
     VisualObject mVisualObject;
     std::vector<VisualObject*> mObjects;
     std::unordered_map<std::string, VisualObject*> mMap;    // alternativ container
@@ -82,10 +81,10 @@ private:
                       VkBufferUsageFlags usage=VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
     //VkBuffer& buffer,
     //VkDeviceMemory& bufferMemory) ;
-    VkCamera mCamera;
+    Camera mCamera;
     //VkDevice logicalDevice;
     //VkPipelineInputAssemblyStateCreateInfo ia;
     //VkGraphicsPipelineCreateInfo pipelineInfo;
 };
 
-#endif // RENDERWINDOW_H
+#endif // RENDERER_H

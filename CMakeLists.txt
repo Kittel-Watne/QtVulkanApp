@@ -11,11 +11,11 @@ qt_add_executable(QtVulkanApp
     main.cpp
 
     VulkanWindow.h VulkanWindow.cpp
-    VkTriangleSurface.h VkTriangleSurface.cpp
+    TriangleSurface.h TriangleSurface.cpp
     VisualObject.h VisualObject.cpp
     Vertex.h Vertex.cpp
-    VkCamera.h VkCamera.cpp
-    VkTriangle.h VkTriangle.cpp
+    Camera.h Camera.cpp
+    Triangle.h Triangle.cpp
     Input.h
 )
 # Define the shader files

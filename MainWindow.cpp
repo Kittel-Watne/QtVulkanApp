@@ -12,7 +12,7 @@
 #include <QInputDialog>
 #include "VulkanWindow.h"
 #include "Renderer.h"
-#include "VkTriangleSurface.h"
+#include "TriangleSurface.h"
 
 MainWindow::MainWindow(VulkanWindow *vw, QPlainTextEdit *logWidget)
     : mVulkanWindow(vw)
@@ -113,7 +113,7 @@ void MainWindow::openFile() // slot
         //QString tekst;
         //loadFile(filnavn, tekst);
         //textEdit->setPlainText(tekst);
-        VkTriangleSurface* surf = new VkTriangleSurface(filnavn.toStdString());
+        TriangleSurface* surf = new TriangleSurface(filnavn.toStdString());
         auto rw = dynamic_cast<Renderer*>(mVulkanWindow->getRenderWindow());
         rw->getObjects().push_back(surf);
         rw->releaseResources();
