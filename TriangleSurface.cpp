@@ -19,7 +19,7 @@ TriangleSurface::TriangleSurface() : VisualObject()
     mVertices.push_back(v4);
 
     mMatrix.scale(0.5f);
-    mMatrix.translate(0.5f, 0, 0); // fra startNextFrame
+    mMatrix.translate(0.5f, 0.1f, 0.1f);
 }
 
 TriangleSurface::TriangleSurface(const std::string &filename)

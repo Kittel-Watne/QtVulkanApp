@@ -11,6 +11,7 @@ void Camera::perspective(int degrees, double aspect, double nearplane, double fa
 {
     mProjectionMatrix.setToIdentity();
     mProjectionMatrix.perspective(degrees, aspect, nearplane, farplane);
+    //Flip projection because of Vulkan's -Y axis
     mProjectionMatrix.scale(1.0f, -1.0f, 1.0f);
 }
 
@@ -26,8 +27,6 @@ void Camera::lookAt(const QVector3D &eye, const QVector3D &at, const QVector3D &
 void Camera::translate(float dx, float dy, float dz)
 {
     mViewMatrix.translate(dx, dy, dz);
-    //Flip projection because of Vulkan's -Y axis
-    // mViewMatrix.scale(1.0f, -1.0f, 1.0f);
 }
 
 void Camera::rotate(float t, float x, float y, float z)

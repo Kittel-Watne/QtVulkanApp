@@ -17,6 +17,7 @@ qt_add_executable(QtVulkanApp
     Camera.h Camera.cpp
     Triangle.h Triangle.cpp
     Input.h
+    WorldAxis.h WorldAxis.cpp
 )
 # Define the shader files
 set(SHADER_FILES

@@ -68,6 +68,14 @@ void VulkanWindow::keyPressEvent(QKeyEvent *event)
     {
         dynamic_cast<Renderer*>(mRenderWindow)->mCamera.translate(-mCameraSpeed, 0.0f, 0.0f);
     }
+    if(event->key() == Qt::Key_Q)   //Down
+    {
+        dynamic_cast<Renderer*>(mRenderWindow)->mCamera.translate(0.0f, mCameraSpeed, 0.0f);
+    }
+    if(event->key() == Qt::Key_E)   //Up
+    {
+        dynamic_cast<Renderer*>(mRenderWindow)->mCamera.translate(0.0f, -mCameraSpeed, 0.0f);
+    }
     /**********************/
 
     if(event->key() == Qt::Key_R)

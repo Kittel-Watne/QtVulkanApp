@@ -1,4 +1,5 @@
 #include "Renderer.h"
+#include "WorldAxis.h"
 #include <QVulkanFunctions>
 #include <QFile>
 
@@ -27,9 +28,11 @@ Renderer::Renderer(QVulkanWindow *w, bool msaa)
     // Dag 230125
     mObjects.push_back(new Triangle());
     mObjects.push_back((new TriangleSurface()));
+    mObjects.push_back((new WorldAxis()));
     // Dag 030225
     mObjects.at(0)->setName("triangel");
     mObjects.at(1)->setName("surf");
+    mObjects.at(2)->setName("Axis");
     // **************************************
     // Legger inn objekter i map
     // **************************************
@@ -244,8 +247,8 @@ void Renderer::initSwapChainResources()
     //find the size of the window
     const QSize sz = mWindow->swapChainImageSize();
 
-    mCamera.perspective(25.0f, sz.width() / (float) sz.height(), 0.01f, 100.0f);
-    mCamera.translate(0, 0, -4); //Camera is -4 away from origo
+    mCamera.perspective(45.0f, sz.width() / (float) sz.height(), 0.01f, 100.0f);
+    mCamera.translate(-1, -1, -4); //Camera is -4 away from origo
 }
 
 void Renderer::startNextFrame()
