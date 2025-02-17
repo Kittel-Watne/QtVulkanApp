@@ -5,8 +5,8 @@
 class Camera
 {
 private:
-    QVector3D mEye{0.0, 0.0, 9.0};  // Camera position
-    QVector3D mAt{0.0, 0.0, 0.0};   // Forward vector
+    QVector3D mEye{0.0, 0.0, 0.0};  // Camera position
+    QVector3D mAt{0.0, 0.0, -1.0};   // Forward vector
     QVector3D mUp{0.0, 1.0, 0.0};   // Up vector
 
     QMatrix4x4 mProjectionMatrix{};

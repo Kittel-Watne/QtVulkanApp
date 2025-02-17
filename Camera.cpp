@@ -24,7 +24,6 @@ void Camera::lookAt(const QVector3D &eye, const QVector3D &at, const QVector3D &
     mViewMatrix.lookAt(mEye, mAt, mUp);
 }
 
-
 //Translate camera in world coordinates
 void Camera::translate(float dx, float dy, float dz)
 {

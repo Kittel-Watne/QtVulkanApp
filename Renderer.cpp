@@ -40,6 +40,9 @@ Renderer::Renderer(QVulkanWindow *w, bool msaa)
     //std::string navn{"navn"}; // Skal VisualObject klassen få en navn-variabel?
     for (auto it=mObjects.begin(); it!=mObjects.end(); it++)
         mMap.insert(std::pair<std::string, VisualObject*>{(*it)->getName(),*it});
+
+	//Inital position of the camera
+    mCamera.translate(-1, -1, -4);
 }
 
 void Renderer::initResources()
@@ -249,7 +252,6 @@ void Renderer::initSwapChainResources()
     const QSize sz = mWindow->swapChainImageSize();
 
     mCamera.perspective(45.0f, sz.width() / (float) sz.height(), 0.01f, 100.0f);
-    mCamera.translate(-1, -1, -4); //Camera is -4 away from origo
 }
 
 void Renderer::startNextFrame()
