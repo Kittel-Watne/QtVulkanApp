@@ -3,6 +3,7 @@
 
 #include <QVulkanWindow>
 #include "VisualObject.h"
+#include "Input.h"
 
 /*The QVulkanWindow subclass reimplements the factory function QVulkanWindow::createRenderer().
 This returns a new instance of the QVulkanWindowRenderer subclass.
@@ -30,17 +31,23 @@ protected:
     // Uncomment to use (you also have to make the definitions of
     // these functions in the cpp-file to use them of course!)
     //
-    //    void mousePressEvent(QMouseEvent *event) override{}
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
-    void keyPressEvent(QKeyEvent *event) override;              //the only one we use now
-    //    void keyReleaseEvent(QKeyEvent *event) override{}
-    //    void wheelEvent(QWheelEvent *event) override{}
+    void keyPressEvent(QKeyEvent *event) override;
+    void keyReleaseEvent(QKeyEvent *event) override;
+    void wheelEvent(QWheelEvent *event) override;
 
     QVulkanWindowRenderer* mRenderWindow{ nullptr };
     VisualObject* mSelectedObject{ nullptr };
     int mIndex{0};
 
 private:
+    void setCameraSpeed(float value);
+    Input mInput;
+    float mCameraSpeed{0.05f};
     int mMouseXlast{0}; //for mouse rotate input
+    int mMouseYlast{0};
+
 };
 #endif // VULKANWINDOW_H
