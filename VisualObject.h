@@ -23,6 +23,8 @@ public:
 
     QMatrix4x4 mMatrix;
 
+	int drawType{ 0 }; // 0 = fill, 1 = line
+
 protected:
     std::string mName;
 };

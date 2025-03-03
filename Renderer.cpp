@@ -120,7 +120,7 @@ void Renderer::initResources()
     pipelineLayoutInfo.setLayoutCount = 0;
     pipelineLayoutInfo.pushConstantRangeCount = 1;  // OEF: PushConstants update
     pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange; // OEF: PushConstants update
-    err = mDeviceFunctions->vkCreatePipelineLayout(logicalDevice, &pipelineLayoutInfo, nullptr, &mPipelineLayout1);
+    err = mDeviceFunctions->vkCreatePipelineLayout(logicalDevice, &pipelineLayoutInfo, nullptr, &mPipelineLayout);
     if (err != VK_SUCCESS)
         qFatal("Failed to create pipeline layout: %d", err);
 
@@ -210,12 +210,23 @@ void Renderer::initResources()
     dynamic.pDynamicStates = dynEnable;
     pipelineInfo.pDynamicState = &dynamic;
 
-    pipelineInfo.layout = mPipelineLayout1;
+    pipelineInfo.layout = mPipelineLayout;
     pipelineInfo.renderPass = mWindow->defaultRenderPass();
 
     err = mDeviceFunctions->vkCreateGraphicsPipelines(logicalDevice, mPipelineCache, 1, &pipelineInfo, nullptr, &mPipeline1);
     if (err != VK_SUCCESS)
         qFatal("Failed to create graphics pipeline: %d", err);
+
+	//Making a pipeline for drawing lines
+	mPipeline2 = mPipeline1;                                    //reusing most of the settings from the first pipeline
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;   // or VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    rasterization.polygonMode = VK_POLYGON_MODE_LINE;           // VK_POLYGON_MODE_LINE will make a wireframe; VK_POLYGON_MODE_FILL
+    rasterization.lineWidth = 5.0f;
+    pipelineInfo.pInputAssemblyState = &inputAssembly;
+    err = mDeviceFunctions->vkCreateGraphicsPipelines(logicalDevice, mPipelineCache, 1, &pipelineInfo, nullptr, &mPipeline2);
+    if (err != VK_SUCCESS)
+        qFatal("Failed to create graphics pipeline: %d", err);
+
 
     if (vertShaderModule)
         mDeviceFunctions->vkDestroyShaderModule(logicalDevice, vertShaderModule, nullptr);
@@ -265,7 +276,7 @@ void Renderer::startNextFrame()
     mDeviceFunctions->vkCmdBeginRenderPass(cmdBuf, &rpBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     //Bind the graphics pipeline to be used in render pass
-    mDeviceFunctions->vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline1);
+    //mDeviceFunctions->vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline1);
 
     VkDeviceSize vbOffset{ 0 };     //Offsets into buffer being bound
 
@@ -274,8 +285,8 @@ void Renderer::startNextFrame()
     viewport.x = viewport.y = 0.f;
     viewport.width = sz.width();
     viewport.height = sz.height();
-    viewport.minDepth = 0.f;
-    viewport.maxDepth = 1.f;
+    viewport.minDepth = 0.f;                //min framebuffer depth
+    viewport.maxDepth = 1.f;                //max framebuffer depth
     mDeviceFunctions->vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
 
     //Scissor - area to draw in the target frame buffer
@@ -288,6 +299,12 @@ void Renderer::startNextFrame()
     /********************************* Our draw call!: *********************************/
     for (std::vector<VisualObject*>::iterator it=mObjects.begin(); it!=mObjects.end(); it++)
     {
+        VisualObject* obj = *it;
+		if (obj->drawType == 0)
+			mDeviceFunctions->vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline1);
+		else
+			mDeviceFunctions->vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline2);
+
         mDeviceFunctions->vkCmdBindVertexBuffers(cmdBuf, 0, 1, &(*it)->mBuffer, &vbOffset);
         setModelMatrix(mCamera.cMatrix() * (*it)->mMatrix);
         mDeviceFunctions->vkCmdDraw(cmdBuf, (*it)->mVertices.size(), 1, 0, 0);
@@ -339,7 +356,7 @@ VkShaderModule Renderer::createShader(const QString &name)
 void Renderer::setModelMatrix(QMatrix4x4 modelMatrix)
 {
 
-	mDeviceFunctions->vkCmdPushConstants(mWindow->currentCommandBuffer(), mPipelineLayout1, 
+	mDeviceFunctions->vkCmdPushConstants(mWindow->currentCommandBuffer(), mPipelineLayout, 
         VK_SHADER_STAGE_VERTEX_BIT, 0, 16 * sizeof(float), modelMatrix.constData());
 }
 
@@ -452,18 +469,14 @@ void Renderer::releaseResources()
         mPipeline1 = VK_NULL_HANDLE;
     }
 
-    if (mPipelineLayout1) {
-        mDeviceFunctions->vkDestroyPipelineLayout(dev, mPipelineLayout1, nullptr);
-        mPipelineLayout1 = VK_NULL_HANDLE;
-    }
     if (mPipeline2) {
         mDeviceFunctions->vkDestroyPipeline(dev, mPipeline2, nullptr);
         mPipeline2 = VK_NULL_HANDLE;
     }
 
-    if (mPipelineLayout2) {
-        mDeviceFunctions->vkDestroyPipelineLayout(dev, mPipelineLayout2, nullptr);
-        mPipelineLayout2 = VK_NULL_HANDLE;
+    if (mPipelineLayout) {
+        mDeviceFunctions->vkDestroyPipelineLayout(dev, mPipelineLayout, nullptr);
+        mPipelineLayout = VK_NULL_HANDLE;
     }
 
     if (mPipelineCache) {
