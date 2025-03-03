@@ -165,64 +165,63 @@ void Renderer::initResources()
     pipelineInfo.pStages = shaderStages;
     pipelineInfo.pVertexInputState = &vertexInputInfo;
 
-    VkPipelineInputAssemblyStateCreateInfo ia;
-    memset(&ia, 0, sizeof(ia));
-    ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    // Dag 220125
-    ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    pipelineInfo.pInputAssemblyState = &ia;
+    VkPipelineInputAssemblyStateCreateInfo inputAssembly;
+    memset(&inputAssembly, 0, sizeof(inputAssembly));
+    inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    pipelineInfo.pInputAssemblyState = &inputAssembly;
 
     // The viewport and scissor will be set dynamically via vkCmdSetViewport/Scissor.
     // This way the pipeline does not need to be touched when resizing the window.
-    VkPipelineViewportStateCreateInfo vp;
-    memset(&vp, 0, sizeof(vp));
-    vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    vp.viewportCount = 1;
-    vp.scissorCount = 1;
-    pipelineInfo.pViewportState = &vp;
+    VkPipelineViewportStateCreateInfo viewport;
+    memset(&viewport, 0, sizeof(viewport));
+    viewport.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewport.viewportCount = 1;
+    viewport.scissorCount = 1;
+    pipelineInfo.pViewportState = &viewport;
 
-    VkPipelineRasterizationStateCreateInfo rs;
-    memset(&rs, 0, sizeof(rs));
-    rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rs.polygonMode = VK_POLYGON_MODE_FILL;//VK_POLYGON_MODE_LINE;
-    rs.cullMode = VK_CULL_MODE_NONE; // we want the back face as well
-    rs.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    rs.lineWidth = 1.0f;
-    pipelineInfo.pRasterizationState = &rs;
+    VkPipelineRasterizationStateCreateInfo rasterization;
+    memset(&rasterization, 0, sizeof(rasterization));
+    rasterization.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterization.polygonMode = VK_POLYGON_MODE_FILL;   // VK_POLYGON_MODE_LINE will make a wireframe;
+    rasterization.cullMode = VK_CULL_MODE_NONE;         // VK_CULL_MODE_BACK_BIT will cull backsides
+    rasterization.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rasterization.lineWidth = 1.0f;
+    pipelineInfo.pRasterizationState = &rasterization;
 
-    VkPipelineMultisampleStateCreateInfo ms;
-    memset(&ms, 0, sizeof(ms));
-    ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    VkPipelineMultisampleStateCreateInfo multisample;
+    memset(&multisample, 0, sizeof(multisample));
+    multisample.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     // Enable multisampling.
-    ms.rasterizationSamples = mWindow->sampleCountFlagBits();
-    pipelineInfo.pMultisampleState = &ms;
+    multisample.rasterizationSamples = mWindow->sampleCountFlagBits();
+    pipelineInfo.pMultisampleState = &multisample;
 
-    VkPipelineDepthStencilStateCreateInfo ds;
-    memset(&ds, 0, sizeof(ds));
-    ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    ds.depthTestEnable = VK_TRUE;
-    ds.depthWriteEnable = VK_TRUE;
-    ds.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-    pipelineInfo.pDepthStencilState = &ds;
+    VkPipelineDepthStencilStateCreateInfo depthStencil;
+    memset(&depthStencil, 0, sizeof(depthStencil));
+    depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depthStencil.depthTestEnable = VK_TRUE;
+    depthStencil.depthWriteEnable = VK_TRUE;
+    depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+    pipelineInfo.pDepthStencilState = &depthStencil;
 
-    VkPipelineColorBlendStateCreateInfo cb;
-    memset(&cb, 0, sizeof(cb));
-    cb.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    VkPipelineColorBlendStateCreateInfo colorBlend;
+    memset(&colorBlend, 0, sizeof(colorBlend));
+    colorBlend.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     // no blend, write out all of rgba
-    VkPipelineColorBlendAttachmentState att;
-    memset(&att, 0, sizeof(att));
-    att.colorWriteMask = 0xF;
-    cb.attachmentCount = 1;
-    cb.pAttachments = &att;
-    pipelineInfo.pColorBlendState = &cb;
+    VkPipelineColorBlendAttachmentState colorBlendAttachment;
+    memset(&colorBlendAttachment, 0, sizeof(colorBlendAttachment));
+    colorBlendAttachment.colorWriteMask = 0xF;
+    colorBlend.attachmentCount = 1;
+    colorBlend.pAttachments = &colorBlendAttachment;
+    pipelineInfo.pColorBlendState = &colorBlend;
 
     VkDynamicState dynEnable[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-    VkPipelineDynamicStateCreateInfo dyn;
-    memset(&dyn, 0, sizeof(dyn));
-    dyn.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dyn.dynamicStateCount = sizeof(dynEnable) / sizeof(VkDynamicState);
-    dyn.pDynamicStates = dynEnable;
-    pipelineInfo.pDynamicState = &dyn;
+    VkPipelineDynamicStateCreateInfo dynamic;
+    memset(&dynamic, 0, sizeof(dynamic));
+    dynamic.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamic.dynamicStateCount = sizeof(dynEnable) / sizeof(VkDynamicState);
+    dynamic.pDynamicStates = dynEnable;
+    pipelineInfo.pDynamicState = &dynamic;
 
     pipelineInfo.layout = mPipelineLayout;
     pipelineInfo.renderPass = mWindow->defaultRenderPass();
@@ -284,11 +283,11 @@ void Renderer::startNextFrame()
     VkDeviceSize vbOffset = 0;
 
     VkViewport viewport{};
-    viewport.x = viewport.y = 0;
+    viewport.x = viewport.y = 0.f;
     viewport.width = sz.width();
     viewport.height = sz.height();
-    viewport.minDepth = 0;
-    viewport.maxDepth = 1;
+    viewport.minDepth = 0.f;
+    viewport.maxDepth = 1.f;
     mDeviceFunctions->vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
 
     VkRect2D scissor{};
