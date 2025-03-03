@@ -1,7 +1,8 @@
 #include "Renderer.h"
-#include "WorldAxis.h"
 #include <QVulkanFunctions>
 #include <QFile>
+#include "VulkanWindow.h"
+#include "WorldAxis.h"
 
 //Utility function for alignment:
 static inline VkDeviceSize aligned(VkDeviceSize v, VkDeviceSize byteAlign)
@@ -42,7 +43,10 @@ Renderer::Renderer(QVulkanWindow *w, bool msaa)
         mMap.insert(std::pair<std::string, VisualObject*>{(*it)->getName(),*it});
 
 	//Inital position of the camera
-    mCamera.translate(-1, -1, -4);
+    mCamera.setPosition(QVector3D(-1, -1, -4));
+
+    //OEF: need access to our VulkanWindow so making a convenience pointer
+    mVulkanWindow = dynamic_cast<VulkanWindow*>(w);
 }
 
 void Renderer::initResources()
@@ -252,6 +256,11 @@ void Renderer::initSwapChainResources()
 
 void Renderer::startNextFrame()
 {
+    //OEF: Handeling input from keyboard and mouse is done in VulkanWindow
+    //Has to be done each frame to get smooth movement
+    mVulkanWindow->handleInput();
+    mCamera.update();
+
     VkCommandBuffer cmdBuf = mWindow->currentCommandBuffer();
     const QSize sz = mWindow->swapChainImageSize();
     //qDebug() << "startNextFrame()";
@@ -274,9 +283,6 @@ void Renderer::startNextFrame()
     rpBeginInfo.clearValueCount = mWindow->sampleCountFlagBits() > VK_SAMPLE_COUNT_1_BIT ? 3 : 2;
     rpBeginInfo.pClearValues = clearValues;
     mDeviceFunctions->vkCmdBeginRenderPass(cmdBuf, &rpBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-    //Bind the graphics pipeline to be used in render pass
-    //mDeviceFunctions->vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline1);
 
     VkDeviceSize vbOffset{ 0 };     //Offsets into buffer being bound
 

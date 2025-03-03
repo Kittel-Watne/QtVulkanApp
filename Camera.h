@@ -4,6 +4,27 @@
 
 class Camera
 {
+public:
+    Camera();
+    ~Camera() {}
+
+    void init();
+    void perspective(int degrees, double aspect, double nearplane, double farplane);
+    void lookAt(const QVector3D& eye, const QVector3D& at, const QVector3D& up);
+
+    void translate(float dx, float dy, float dz);
+    void rotate(float t, float x, float y, float z);
+
+    void setSpeed(float speed);
+    void moveRight(float delta);
+    void updateHeigth(float deltaHeigth);
+    QMatrix4x4 cMatrix();
+
+    void update();
+	void setPosition(const QVector3D& position);
+    void pitch(float degrees);
+    void yaw(float degrees);
+
 private:
     QVector3D mEye{0.0, 0.0, 0.0};  // Camera position
     QVector3D mAt{0.0, 0.0, -1.0};   // Forward vector
@@ -12,17 +33,13 @@ private:
     QMatrix4x4 mProjectionMatrix{};
     QMatrix4x4 mViewMatrix{};
 
-public:
-    Camera();
-    ~Camera() { }
+    QVector3D mPosition{ 0.f, 0.f, 0.f };
+    float mPitch{ 0.f };
+    float mYaw{ 0.f };
 
-    void init();
-    void perspective(int degrees, double aspect, double nearplane, double farplane);
-    void lookAt(const QVector3D& eye, const QVector3D& at, const QVector3D& up);
+    float mSpeed{ 0.f }; //camera will move by this speed
 
-    void translate(float dx, float dy, float dz);
-    void rotate(float t, float x, float y, float z);
-    QMatrix4x4 cMatrix();
+
 };
 
 #endif // CAMERA_H

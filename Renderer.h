@@ -53,7 +53,7 @@ protected:
 
     //Vulkan resources:
     QVulkanWindow* mWindow{ nullptr };
-    QVulkanDeviceFunctions *mDeviceFunctions{ nullptr };
+    QVulkanDeviceFunctions* mDeviceFunctions{ nullptr };
 
     VkDeviceMemory mBufferMemory{ VK_NULL_HANDLE };
     VkBuffer mBuffer{ VK_NULL_HANDLE };
@@ -80,6 +80,7 @@ private:
                       VkBufferUsageFlags usage=VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 
     Camera mCamera;
+    class VulkanWindow* mVulkanWindow{ nullptr };
 };
 
 #endif // RENDERER_H
