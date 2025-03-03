@@ -9,7 +9,7 @@ class VisualObject
 {
 public:
     std::vector<Vertex> mVertices;
-    std::vector<Vertex> getVertices() { return mVertices; }
+    inline std::vector<Vertex> getVertices() { return mVertices; }
     VisualObject();
     void setName(std::string name);
     std::string getName() const;

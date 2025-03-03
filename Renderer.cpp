@@ -103,9 +103,9 @@ void Renderer::initResources()
     VkPipelineCacheCreateInfo pipelineCacheInfo;
     memset(&pipelineCacheInfo, 0, sizeof(pipelineCacheInfo));
     pipelineCacheInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-    VkResult err = mDeviceFunctions->vkCreatePipelineCache(logicalDevice, &pipelineCacheInfo, nullptr, &mPipelineCache);
-    if (err != VK_SUCCESS)
-        qFatal("Failed to create pipeline cache: %d", err);
+    VkResult result = mDeviceFunctions->vkCreatePipelineCache(logicalDevice, &pipelineCacheInfo, nullptr, &mPipelineCache);
+    if (result != VK_SUCCESS)
+        qFatal("Failed to create pipeline cache: %d", result);
 
     // Pipeline layout
     // Set up the push constant info
@@ -120,9 +120,9 @@ void Renderer::initResources()
     pipelineLayoutInfo.setLayoutCount = 0;
     pipelineLayoutInfo.pushConstantRangeCount = 1;  // OEF: PushConstants update
     pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange; // OEF: PushConstants update
-    err = mDeviceFunctions->vkCreatePipelineLayout(logicalDevice, &pipelineLayoutInfo, nullptr, &mPipelineLayout);
-    if (err != VK_SUCCESS)
-        qFatal("Failed to create pipeline layout: %d", err);
+    result = mDeviceFunctions->vkCreatePipelineLayout(logicalDevice, &pipelineLayoutInfo, nullptr, &mPipelineLayout);
+    if (result != VK_SUCCESS)
+        qFatal("Failed to create pipeline layout: %d", result);
 
     /********************************* Create shaders *********************************/
     //Creates our actual shader modules
@@ -213,9 +213,9 @@ void Renderer::initResources()
     pipelineInfo.layout = mPipelineLayout;
     pipelineInfo.renderPass = mWindow->defaultRenderPass();
 
-    err = mDeviceFunctions->vkCreateGraphicsPipelines(logicalDevice, mPipelineCache, 1, &pipelineInfo, nullptr, &mPipeline1);
-    if (err != VK_SUCCESS)
-        qFatal("Failed to create graphics pipeline: %d", err);
+    result = mDeviceFunctions->vkCreateGraphicsPipelines(logicalDevice, mPipelineCache, 1, &pipelineInfo, nullptr, &mPipeline1);
+    if (result != VK_SUCCESS)
+        qFatal("Failed to create graphics pipeline: %d", result);
 
 	//Making a pipeline for drawing lines
 	mPipeline2 = mPipeline1;                                    //reusing most of the settings from the first pipeline
@@ -223,9 +223,9 @@ void Renderer::initResources()
     rasterization.polygonMode = VK_POLYGON_MODE_LINE;           // VK_POLYGON_MODE_LINE will make a wireframe; VK_POLYGON_MODE_FILL
     rasterization.lineWidth = 5.0f;
     pipelineInfo.pInputAssemblyState = &inputAssembly;
-    err = mDeviceFunctions->vkCreateGraphicsPipelines(logicalDevice, mPipelineCache, 1, &pipelineInfo, nullptr, &mPipeline2);
-    if (err != VK_SUCCESS)
-        qFatal("Failed to create graphics pipeline: %d", err);
+    result = mDeviceFunctions->vkCreateGraphicsPipelines(logicalDevice, mPipelineCache, 1, &pipelineInfo, nullptr, &mPipeline2);
+    if (result != VK_SUCCESS)
+        qFatal("Failed to create graphics pipeline: %d", result);
 
 
     if (vertShaderModule)
@@ -299,8 +299,7 @@ void Renderer::startNextFrame()
     /********************************* Our draw call!: *********************************/
     for (std::vector<VisualObject*>::iterator it=mObjects.begin(); it!=mObjects.end(); it++)
     {
-        VisualObject* obj = *it;
-		if (obj->drawType == 0)
+		if ((*it)->drawType == 0)
 			mDeviceFunctions->vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline1);
 		else
 			mDeviceFunctions->vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline2);
