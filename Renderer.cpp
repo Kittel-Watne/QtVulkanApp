@@ -65,10 +65,7 @@ void Renderer::initResources()
     const VkDeviceSize uniAlign = pdevLimits->minUniformBufferOffsetAlignment;
     qDebug("uniform buffer offset alignment is %u", (uint)uniAlign); //64 on Oles machine
 
-    /// Dag 240125:
-	VkBufferCreateInfo bufferInfo{};                //C++11: {} is the same as memset(&bufferInfo, 0, sizeof(bufferInfo));
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;    // Set the structure type
-
+	/// Dag 240125: Create correct buffers for all objects in mObjects with createBuffer() function
     for (auto it=mObjects.begin(); it!=mObjects.end(); it++)
     {
         createBuffer(logicalDevice, uniAlign, *it);
@@ -93,7 +90,7 @@ void Renderer::initResources()
 	vertexAttrDesc[1].format = VK_FORMAT_R32G32B32_SFLOAT;
 	vertexAttrDesc[1].offset = 3 * sizeof(float);
 
-    VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+	VkPipelineVertexInputStateCreateInfo vertexInputInfo{};	    // C++11: {} is the same as memset(&bufferInfo, 0, sizeof(bufferInfo));
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertexInputInfo.pNext = nullptr;
     vertexInputInfo.flags = 0;
@@ -101,9 +98,10 @@ void Renderer::initResources()
     vertexInputInfo.pVertexBindingDescriptions = &vertexBindingDesc;
     vertexInputInfo.vertexAttributeDescriptionCount = 2; // position and color
     vertexInputInfo.pVertexAttributeDescriptions = vertexAttrDesc;
+    /***********/
 
     // Pipeline cache - supposed to increase performance
-    VkPipelineCacheCreateInfo pipelineCacheInfo{};
+    VkPipelineCacheCreateInfo pipelineCacheInfo{};          
     pipelineCacheInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
     VkResult result = mDeviceFunctions->vkCreatePipelineCache(logicalDevice, &pipelineCacheInfo, nullptr, &mPipelineCache);
     if (result != VK_SUCCESS)
@@ -152,12 +150,7 @@ void Renderer::initResources()
     pipelineInfo.pStages = shaderStages;
     pipelineInfo.pVertexInputState = &vertexInputInfo;
 
-    VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
-    inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    pipelineInfo.pInputAssemblyState = &inputAssembly;
-
-	// The viewport and scissor will be set dynamically via vkCmdSetViewport/Scissor in startNextFrame().
+    // The viewport and scissor will be set dynamically via vkCmdSetViewport/Scissor in setRenderPassParameters().
     // This way the pipeline does not need to be touched when resizing the window.
     VkPipelineViewportStateCreateInfo viewport{};
     viewport.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -165,20 +158,42 @@ void Renderer::initResources()
     viewport.scissorCount = 1;
     pipelineInfo.pViewportState = &viewport;
 
+	// **** Input Assembly **** - describes how primitives are assembled in the Graphics pipeline
+    VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
+    inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;       //Draw triangles
+	inputAssembly.primitiveRestartEnable = VK_FALSE;                    //Allow strips to be connected, not used in TriangleList
+    pipelineInfo.pInputAssemblyState = &inputAssembly;
+
+	// **** Rasterizer **** - takes the geometry and turns it into fragments
     VkPipelineRasterizationStateCreateInfo rasterization{};
     rasterization.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rasterization.polygonMode = VK_POLYGON_MODE_FILL;   // VK_POLYGON_MODE_LINE will make a wireframe;
-    rasterization.cullMode = VK_CULL_MODE_NONE;         // VK_CULL_MODE_BACK_BIT will cull backsides
-    rasterization.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    rasterization.lineWidth = 1.0f;
+    rasterization.polygonMode = VK_POLYGON_MODE_FILL;           // VK_POLYGON_MODE_LINE will make a wireframe;
+    rasterization.cullMode = VK_CULL_MODE_NONE;                 // VK_CULL_MODE_BACK_BIT will cull backsides
+	rasterization.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;  // Front face is counter clockwise - could be clockwise with VK_FRONT_FACE_CLOCKWISE
+    rasterization.lineWidth = 1.0f;                             // Not important for VK_POLYGON_MODE_FILL
     pipelineInfo.pRasterizationState = &rasterization;
 
+    // Enable multisampling
     VkPipelineMultisampleStateCreateInfo multisample{};
     multisample.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    // Enable multisampling.
     multisample.rasterizationSamples = mWindow->sampleCountFlagBits();
     pipelineInfo.pMultisampleState = &multisample;
 
+	// **** Color Blending **** - 
+    // how to blend the color of a fragment that is already in the framebuffer with the color of the fragment being added
+ 
+    VkPipelineColorBlendAttachmentState colorBlendAttachment{}; // Need this struct for ColorBlending CreateInfo
+    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT
+        | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;  // Colors to apply blending to - was hardcoded to 0xF;
+
+    VkPipelineColorBlendStateCreateInfo colorBlend{};
+    colorBlend.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlend.attachmentCount = 1;                             // the one we made above
+    colorBlend.pAttachments = &colorBlendAttachment;
+    pipelineInfo.pColorBlendState = &colorBlend;                // no blending for now, write out all of rgba
+
+    // **** Depth Stencil ****
     VkPipelineDepthStencilStateCreateInfo depthStencil{};
     depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     depthStencil.depthTestEnable = VK_TRUE;
@@ -186,20 +201,12 @@ void Renderer::initResources()
     depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     pipelineInfo.pDepthStencilState = &depthStencil;
 
-    VkPipelineColorBlendStateCreateInfo colorBlend{};
-    colorBlend.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    // no blend, write out all of rgba
-    VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-    colorBlendAttachment.colorWriteMask = 0xF;
-    colorBlend.attachmentCount = 1;
-    colorBlend.pAttachments = &colorBlendAttachment;
-    pipelineInfo.pColorBlendState = &colorBlend;
-
-    VkDynamicState dynEnable[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+	// **** Dynamic State **** - dynamic states can be changed without recreating the pipeline
+    VkDynamicState dynamicEnable[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
     VkPipelineDynamicStateCreateInfo dynamic{};
     dynamic.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamic.dynamicStateCount = sizeof(dynEnable) / sizeof(VkDynamicState);
-    dynamic.pDynamicStates = dynEnable;
+    dynamic.dynamicStateCount = sizeof(dynamicEnable) / sizeof(VkDynamicState);
+    dynamic.pDynamicStates = dynamicEnable;
     pipelineInfo.pDynamicState = &dynamic;
 
     pipelineInfo.layout = mPipelineLayout;
@@ -210,9 +217,9 @@ void Renderer::initResources()
         qFatal("Failed to create graphics pipeline: %d", result);
 
 	//Making a pipeline for drawing lines
-	mPipeline2 = mPipeline1;                                    //reusing most of the settings from the first pipeline
-    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;   // or VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    rasterization.polygonMode = VK_POLYGON_MODE_LINE;           // VK_POLYGON_MODE_LINE will make a wireframe; VK_POLYGON_MODE_FILL
+	mPipeline2 = mPipeline1;                                    // reusing most of the settings from the first pipeline
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;   // draw lines
+    rasterization.polygonMode = VK_POLYGON_MODE_FILL;           // VK_POLYGON_MODE_LINE will make a wireframe; VK_POLYGON_MODE_FILL
     rasterization.lineWidth = 5.0f;
     pipelineInfo.pInputAssemblyState = &inputAssembly;
     result = mDeviceFunctions->vkCreateGraphicsPipelines(logicalDevice, mPipelineCache, 1, &pipelineInfo, nullptr, &mPipeline2);
@@ -252,7 +259,7 @@ void Renderer::startNextFrame()
 
     VkCommandBuffer commandBuffer = mWindow->currentCommandBuffer();
 
-	setViewportPipeline(commandBuffer);
+	setRenderPassParameters(commandBuffer);
 
     VkDeviceSize vbOffset{ 0 };     //Offsets into buffer being bound
 
@@ -312,7 +319,7 @@ void Renderer::setModelMatrix(QMatrix4x4 modelMatrix)
         VK_SHADER_STAGE_VERTEX_BIT, 0, 16 * sizeof(float), modelMatrix.constData());
 }
 
-void Renderer::setViewportPipeline(VkCommandBuffer commandBuffer)
+void Renderer::setRenderPassParameters(VkCommandBuffer commandBuffer)
 {
     const QSize swapChainImageSize = mWindow->swapChainImageSize();
 
@@ -349,7 +356,6 @@ void Renderer::setViewportPipeline(VkCommandBuffer commandBuffer)
     scissor.extent.width = viewport.width;
     scissor.extent.height = viewport.height;
     mDeviceFunctions->vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-
 }
 
 // Dag 240125
@@ -506,7 +512,6 @@ void Renderer::releaseResources()
             mDeviceFunctions->vkFreeMemory(dev, (*it)->mBufferMemory, nullptr);
             (*it)->mBuffer = VK_NULL_HANDLE;
         }
-
     }
 }
 

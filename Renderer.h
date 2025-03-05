@@ -46,7 +46,7 @@ protected:
 
 	void setModelMatrix(QMatrix4x4 modelMatrix);
 
-	void setViewportPipeline(VkCommandBuffer commandBuffer);
+	void setRenderPassParameters(VkCommandBuffer commandBuffer);
 
     //The ModelViewProjection MVP matrix
     QMatrix4x4 mProjectionMatrix;
