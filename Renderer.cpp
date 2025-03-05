@@ -145,8 +145,8 @@ void Renderer::initResources()
 
     VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderCreateInfo, fragShaderCreateInfo };
 
-    // Graphics pipeline
-    VkGraphicsPipelineCreateInfo pipelineInfo{};
+	/*********************** Graphics pipeline ********************************/
+    VkGraphicsPipelineCreateInfo pipelineInfo{};    //Will use this variable a lot in the next 100s of lines
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineInfo.stageCount = 2; //vertex and fragment shader
     pipelineInfo.pStages = shaderStages;
@@ -157,7 +157,7 @@ void Renderer::initResources()
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     pipelineInfo.pInputAssemblyState = &inputAssembly;
 
-    // The viewport and scissor will be set dynamically via vkCmdSetViewport/Scissor.
+	// The viewport and scissor will be set dynamically via vkCmdSetViewport/Scissor in startNextFrame().
     // This way the pipeline does not need to be touched when resizing the window.
     VkPipelineViewportStateCreateInfo viewport{};
     viewport.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -220,6 +220,7 @@ void Renderer::initResources()
         qFatal("Failed to create graphics pipeline: %d", result);
 
 
+	// Destroying the shader modules, we won't need them anymore after the pipeline is created
     if (vertShaderModule)
         mDeviceFunctions->vkDestroyShaderModule(logicalDevice, vertShaderModule, nullptr);
     if (fragShaderModule)
@@ -247,72 +248,32 @@ void Renderer::startNextFrame()
     //OEF: Handeling input from keyboard and mouse is done in VulkanWindow
     //Has to be done each frame to get smooth movement
     mVulkanWindow->handleInput();
-    mCamera.update();
+    mCamera.update();               //input can have moved the camera
 
-    VkCommandBuffer cmdBuf = mWindow->currentCommandBuffer();
-    const QSize sz = mWindow->swapChainImageSize();
-    //qDebug() << "startNextFrame()";
-    //Backtgound color of the render window - dark grey
-    VkClearColorValue clearColor = {{ 0.3, 0.3, 0.3, 1 }};
+    VkCommandBuffer commandBuffer = mWindow->currentCommandBuffer();
 
-    VkClearDepthStencilValue clearDS = { 1, 0 };
-    VkClearValue clearValues[3]{};  //C++11 {} works even on arrays!
-    clearValues[0].color = clearValues[2].color = clearColor;
-    clearValues[1].depthStencil = clearDS;
-
-    VkRenderPassBeginInfo rpBeginInfo{};
-    rpBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    rpBeginInfo.renderPass = mWindow->defaultRenderPass();
-    rpBeginInfo.framebuffer = mWindow->currentFramebuffer();
-    rpBeginInfo.renderArea.extent.width = sz.width();
-    rpBeginInfo.renderArea.extent.height = sz.height();
-    rpBeginInfo.clearValueCount = mWindow->sampleCountFlagBits() > VK_SAMPLE_COUNT_1_BIT ? 3 : 2;
-    rpBeginInfo.pClearValues = clearValues;
-    mDeviceFunctions->vkCmdBeginRenderPass(cmdBuf, &rpBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+	setViewportPipeline(commandBuffer);
 
     VkDeviceSize vbOffset{ 0 };     //Offsets into buffer being bound
-
-    //Viewport - area of the image to render to, usually (0,0) to (width, height)
-    VkViewport viewport{};
-    viewport.x = viewport.y = 0.f;
-    viewport.width = sz.width();
-    viewport.height = sz.height();
-    viewport.minDepth = 0.f;                //min framebuffer depth
-    viewport.maxDepth = 1.f;                //max framebuffer depth
-    mDeviceFunctions->vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
-
-    //Scissor - area to draw in the target frame buffer
-    VkRect2D scissor{};
-    scissor.offset.x = scissor.offset.y = 0;
-    scissor.extent.width = viewport.width;
-    scissor.extent.height = viewport.height;
-    mDeviceFunctions->vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
 
     /********************************* Our draw call!: *********************************/
     for (std::vector<VisualObject*>::iterator it=mObjects.begin(); it!=mObjects.end(); it++)
     {
 		if ((*it)->drawType == 0)
-			mDeviceFunctions->vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline1);
+			mDeviceFunctions->vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline1);
 		else
-			mDeviceFunctions->vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline2);
+			mDeviceFunctions->vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline2);
 
-        mDeviceFunctions->vkCmdBindVertexBuffers(cmdBuf, 0, 1, &(*it)->mBuffer, &vbOffset);
+        mDeviceFunctions->vkCmdBindVertexBuffers(commandBuffer, 0, 1, &(*it)->mBuffer, &vbOffset);
         setModelMatrix(mCamera.cMatrix() * (*it)->mMatrix);
-        mDeviceFunctions->vkCmdDraw(cmdBuf, (*it)->mVertices.size(), 1, 0, 0);
+        mDeviceFunctions->vkCmdDraw(commandBuffer, (*it)->mVertices.size(), 1, 0, 0);
     }
-    // Alternativt draw kall ved å traversere unordered map
-    /*    for (auto it=mMap.begin(); it!=mMap.end(); it++)
-    {
-        // first er name, second er VisualObject*
-        auto p = (*it).second;
-        mDeviceFunctions->vkCmdBindVertexBuffers(cmdBuf, 0, 1, &p->mBuffer, &vbOffset);
-        setModelMatrix(mCamera.cMatrix() * p->mMatrix);
-        mDeviceFunctions->vkCmdDraw(cmdBuf, p->mVertices.size(), 1, 0, 0);
-    }
-    */
-    mDeviceFunctions->vkCmdEndRenderPass(cmdBuf);
+    /***************************************/
+
+    mDeviceFunctions->vkCmdEndRenderPass(commandBuffer);
+
     mObjects.at(1)->rotate(1.0f, 0.0f, 0.0f, 1.0f);
-    //qDebug() << mObjects.at(1)->mMatrix;
+    
     mWindow->frameReady();
     mWindow->requestUpdate(); // render continuously, throttled by the presentation rate
 }
@@ -349,6 +310,46 @@ void Renderer::setModelMatrix(QMatrix4x4 modelMatrix)
 
 	mDeviceFunctions->vkCmdPushConstants(mWindow->currentCommandBuffer(), mPipelineLayout, 
         VK_SHADER_STAGE_VERTEX_BIT, 0, 16 * sizeof(float), modelMatrix.constData());
+}
+
+void Renderer::setViewportPipeline(VkCommandBuffer commandBuffer)
+{
+    const QSize swapChainImageSize = mWindow->swapChainImageSize();
+
+    //Backtgound color of the render window - dark grey
+    VkClearColorValue clearColor = { { 0.3, 0.3, 0.3, 1 } };
+
+    VkClearDepthStencilValue clearDepthStencil = { 1, 0 };
+    VkClearValue clearValues[3]{};  //C++11 {} works even on arrays!
+    clearValues[0].color = clearValues[2].color = clearColor;
+    clearValues[1].depthStencil = clearDepthStencil;
+
+    VkRenderPassBeginInfo renderPassBeginInfo{};
+    renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassBeginInfo.renderPass = mWindow->defaultRenderPass();
+    renderPassBeginInfo.framebuffer = mWindow->currentFramebuffer();
+    renderPassBeginInfo.renderArea.extent.width = swapChainImageSize.width();
+    renderPassBeginInfo.renderArea.extent.height = swapChainImageSize.height();
+    renderPassBeginInfo.clearValueCount = mWindow->sampleCountFlagBits() > VK_SAMPLE_COUNT_1_BIT ? 3 : 2;
+    renderPassBeginInfo.pClearValues = clearValues;
+    mDeviceFunctions->vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+    //Viewport - area of the image to render to, usually (0,0) to (width, height)
+    VkViewport viewport{};
+    viewport.x = viewport.y = 0.f;
+    viewport.width = swapChainImageSize.width();
+    viewport.height = swapChainImageSize.height();
+    viewport.minDepth = 0.f;                //min framebuffer depth
+    viewport.maxDepth = 1.f;                //max framebuffer depth
+    mDeviceFunctions->vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+    //Scissor - area to draw in the target frame buffer
+    VkRect2D scissor{};
+    scissor.offset.x = scissor.offset.y = 0;
+    scissor.extent.width = viewport.width;
+    scissor.extent.height = viewport.height;
+    mDeviceFunctions->vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
 }
 
 // Dag 240125

@@ -46,6 +46,8 @@ protected:
 
 	void setModelMatrix(QMatrix4x4 modelMatrix);
 
+	void setViewportPipeline(VkCommandBuffer commandBuffer);
+
     //The ModelViewProjection MVP matrix
     QMatrix4x4 mProjectionMatrix;
     //Rotation angle of the triangle
