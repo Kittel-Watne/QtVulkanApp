@@ -66,8 +66,7 @@ void Renderer::initResources()
     qDebug("uniform buffer offset alignment is %u", (uint)uniAlign); //64 on Oles machine
 
     /// Dag 240125:
-    VkBufferCreateInfo bufferInfo{};
-    memset(&bufferInfo, 0, sizeof(bufferInfo));                 // Clear out the memory
+	VkBufferCreateInfo bufferInfo{};                //C++11: {} is the same as memset(&bufferInfo, 0, sizeof(bufferInfo));
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;    // Set the structure type
 
     for (auto it=mObjects.begin(); it!=mObjects.end(); it++)
@@ -104,8 +103,7 @@ void Renderer::initResources()
     vertexInputInfo.pVertexAttributeDescriptions = vertexAttrDesc;
 
     // Pipeline cache - supposed to increase performance
-    VkPipelineCacheCreateInfo pipelineCacheInfo;
-    memset(&pipelineCacheInfo, 0, sizeof(pipelineCacheInfo));
+    VkPipelineCacheCreateInfo pipelineCacheInfo{};
     pipelineCacheInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
     VkResult result = mDeviceFunctions->vkCreatePipelineCache(logicalDevice, &pipelineCacheInfo, nullptr, &mPipelineCache);
     if (result != VK_SUCCESS)
@@ -118,8 +116,7 @@ void Renderer::initResources()
     pushConstantRange.offset = 0;
     pushConstantRange.size = 16 * sizeof(float); // 16 floats for the model matrix
 
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo;
-    memset(&pipelineLayoutInfo, 0, sizeof(pipelineLayoutInfo));
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 0;
     pipelineLayoutInfo.pushConstantRangeCount = 1;  // OEF: PushConstants update
@@ -149,30 +146,26 @@ void Renderer::initResources()
     VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderCreateInfo, fragShaderCreateInfo };
 
     // Graphics pipeline
-    VkGraphicsPipelineCreateInfo pipelineInfo;
-    memset(&pipelineInfo, 0, sizeof(pipelineInfo));
+    VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineInfo.stageCount = 2; //vertex and fragment shader
     pipelineInfo.pStages = shaderStages;
     pipelineInfo.pVertexInputState = &vertexInputInfo;
 
-    VkPipelineInputAssemblyStateCreateInfo inputAssembly;
-    memset(&inputAssembly, 0, sizeof(inputAssembly));
+    VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     pipelineInfo.pInputAssemblyState = &inputAssembly;
 
     // The viewport and scissor will be set dynamically via vkCmdSetViewport/Scissor.
     // This way the pipeline does not need to be touched when resizing the window.
-    VkPipelineViewportStateCreateInfo viewport;
-    memset(&viewport, 0, sizeof(viewport));
+    VkPipelineViewportStateCreateInfo viewport{};
     viewport.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     viewport.viewportCount = 1;
     viewport.scissorCount = 1;
     pipelineInfo.pViewportState = &viewport;
 
-    VkPipelineRasterizationStateCreateInfo rasterization;
-    memset(&rasterization, 0, sizeof(rasterization));
+    VkPipelineRasterizationStateCreateInfo rasterization{};
     rasterization.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterization.polygonMode = VK_POLYGON_MODE_FILL;   // VK_POLYGON_MODE_LINE will make a wireframe;
     rasterization.cullMode = VK_CULL_MODE_NONE;         // VK_CULL_MODE_BACK_BIT will cull backsides
@@ -180,35 +173,30 @@ void Renderer::initResources()
     rasterization.lineWidth = 1.0f;
     pipelineInfo.pRasterizationState = &rasterization;
 
-    VkPipelineMultisampleStateCreateInfo multisample;
-    memset(&multisample, 0, sizeof(multisample));
+    VkPipelineMultisampleStateCreateInfo multisample{};
     multisample.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     // Enable multisampling.
     multisample.rasterizationSamples = mWindow->sampleCountFlagBits();
     pipelineInfo.pMultisampleState = &multisample;
 
-    VkPipelineDepthStencilStateCreateInfo depthStencil;
-    memset(&depthStencil, 0, sizeof(depthStencil));
+    VkPipelineDepthStencilStateCreateInfo depthStencil{};
     depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     depthStencil.depthTestEnable = VK_TRUE;
     depthStencil.depthWriteEnable = VK_TRUE;
     depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     pipelineInfo.pDepthStencilState = &depthStencil;
 
-    VkPipelineColorBlendStateCreateInfo colorBlend;
-    memset(&colorBlend, 0, sizeof(colorBlend));
+    VkPipelineColorBlendStateCreateInfo colorBlend{};
     colorBlend.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     // no blend, write out all of rgba
-    VkPipelineColorBlendAttachmentState colorBlendAttachment;
-    memset(&colorBlendAttachment, 0, sizeof(colorBlendAttachment));
+    VkPipelineColorBlendAttachmentState colorBlendAttachment{};
     colorBlendAttachment.colorWriteMask = 0xF;
     colorBlend.attachmentCount = 1;
     colorBlend.pAttachments = &colorBlendAttachment;
     pipelineInfo.pColorBlendState = &colorBlend;
 
     VkDynamicState dynEnable[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-    VkPipelineDynamicStateCreateInfo dynamic;
-    memset(&dynamic, 0, sizeof(dynamic));
+    VkPipelineDynamicStateCreateInfo dynamic{};
     dynamic.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     dynamic.dynamicStateCount = sizeof(dynEnable) / sizeof(VkDynamicState);
     dynamic.pDynamicStates = dynEnable;
@@ -268,13 +256,11 @@ void Renderer::startNextFrame()
     VkClearColorValue clearColor = {{ 0.3, 0.3, 0.3, 1 }};
 
     VkClearDepthStencilValue clearDS = { 1, 0 };
-    VkClearValue clearValues[3];
-    memset(clearValues, 0, sizeof(clearValues));
+    VkClearValue clearValues[3]{};  //C++11 {} works even on arrays!
     clearValues[0].color = clearValues[2].color = clearColor;
     clearValues[1].depthStencil = clearDS;
 
-    VkRenderPassBeginInfo rpBeginInfo;
-    memset(&rpBeginInfo, 0, sizeof(rpBeginInfo));
+    VkRenderPassBeginInfo rpBeginInfo{};
     rpBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     rpBeginInfo.renderPass = mWindow->defaultRenderPass();
     rpBeginInfo.framebuffer = mWindow->currentFramebuffer();
@@ -376,7 +362,6 @@ void Renderer::createBuffer(VkDevice logicalDevice, const VkDeviceSize uniAlign,
     VkDeviceSize vertexAllocSize = aligned(visualObject->getVertices().size() * sizeof(Vertex), uniAlign);
 
     VkBufferCreateInfo bufferInfo{};
-    memset(&bufferInfo, 0, sizeof(bufferInfo)); 
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO; // Set the structure type
     bufferInfo.size = vertexAllocSize; //One vertex buffer (we don't use Uniform buffer in this example)
     bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT; // Set the usage vertex buffer (not using Uniform buffer in this example)
@@ -402,7 +387,7 @@ void Renderer::createBuffer(VkDevice logicalDevice, const VkDeviceSize uniAlign,
     if (err != VK_SUCCESS)
         qFatal("Failed to bind buffer memory: %d", err);
 
-    quint8* p{nullptr};
+    void* p{nullptr};
     err = mDeviceFunctions->vkMapMemory(logicalDevice, visualObject->mBufferMemory, 0, memReq.size, 0, reinterpret_cast<void **>(&p));
     if (err != VK_SUCCESS)
         qFatal("Failed to map memory: %d", err);
