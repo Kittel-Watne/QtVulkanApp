@@ -1,6 +1,7 @@
 #include "Renderer.h"
 #include <QVulkanFunctions>
 #include <QFile>
+#include "UniformTransformations.h"
 #include "VulkanWindow.h"
 #include "WorldAxis.h"
 
@@ -63,13 +64,16 @@ void Renderer::initResources()
     const int concurrentFrameCount = mWindow->concurrentFrameCount(); // 2 on Oles Machine
     const VkPhysicalDeviceLimits *pdevLimits = &mWindow->physicalDeviceProperties()->limits;
     const VkDeviceSize uniAlign = pdevLimits->minUniformBufferOffsetAlignment;
-    qDebug("uniform buffer offset alignment is %u", (uint)uniAlign); //64 on Oles machine
+    qDebug("Uniform buffer offset alignment is %u", (uint)uniAlign); //64 on Oles machine
 
 	/// Dag 240125: Create correct buffers for all objects in mObjects with createBuffer() function
     for (auto it=mObjects.begin(); it!=mObjects.end(); it++)
     {
-        createBuffer(logicalDevice, uniAlign, *it);
+        createVertexBuffer(uniAlign, *it);
     }
+
+    //DescriptorSets must be made before the Pipelines
+    createDescriptorSetLayouts();
 
     /********************************* Vertex layout: *********************************/
 	VkVertexInputBindingDescription vertexBindingDesc{};    //Updated to a more common way to write it
@@ -96,9 +100,9 @@ void Renderer::initResources()
     vertexInputInfo.flags = 0;
     vertexInputInfo.vertexBindingDescriptionCount = 1;
     vertexInputInfo.pVertexBindingDescriptions = &vertexBindingDesc;
-    vertexInputInfo.vertexAttributeDescriptionCount = 2; // position and color
+    vertexInputInfo.vertexAttributeDescriptionCount = 2; // position and color - sizeof(vertexAttrDesc ....)
     vertexInputInfo.pVertexAttributeDescriptions = vertexAttrDesc;
-    /***********/
+    /*******************************************************/
 
     // Pipeline cache - supposed to increase performance
     VkPipelineCacheCreateInfo pipelineCacheInfo{};          
@@ -119,6 +123,8 @@ void Renderer::initResources()
     pipelineLayoutInfo.setLayoutCount = 0;
     pipelineLayoutInfo.pushConstantRangeCount = 1;  // OEF: PushConstants update
     pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange; // OEF: PushConstants update
+    pipelineLayoutInfo.setLayoutCount = 1;          //OEF: Uniforms / DescriptorSet update
+    pipelineLayoutInfo.pSetLayouts = &mDescriptorSetLayout;
     result = mDeviceFunctions->vkCreatePipelineLayout(logicalDevice, &pipelineLayoutInfo, nullptr, &mPipelineLayout);
     if (result != VK_SUCCESS)
         qFatal("Failed to create pipeline layout: %d", result);
@@ -358,15 +364,86 @@ void Renderer::setRenderPassParameters(VkCommandBuffer commandBuffer)
     mDeviceFunctions->vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 }
 
+void Renderer::createDescriptorSetLayouts()
+{
+    VkDescriptorSetLayoutBinding uniformLayoutBinding{};
+    uniformLayoutBinding.binding = 0;
+    uniformLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    uniformLayoutBinding.descriptorCount = 1;
+    uniformLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = 1;
+    layoutInfo.pBindings = &uniformLayoutBinding;
+
+    VkResult err = mDeviceFunctions->vkCreateDescriptorSetLayout(mWindow->device(), &layoutInfo, nullptr, &mDescriptorSetLayout);
+    if (err != VK_SUCCESS)
+        qFatal("Failed to create DescriptorSetLayout: %d", err);
+}
+
+void Renderer::createUniformBuffer()
+{
+    VkDeviceSize bufferSize = sizeof(UniformTransformations);
+}
+
+//Very !!! similar to createBuffer, but here we find and set the memory type explicitly
+void Renderer::createVertexBuffer(const VkDeviceSize uniformAlignment, VisualObject* visualObject)
+{
+    //Gets the size of the mesh - aligned to the uniform alignment
+    VkDeviceSize vertexAllocSize = aligned(visualObject->getVertices().size() * sizeof(Vertex), uniformAlignment);
+
+    //BufferHandle bufferHandle;  //Small helper object to hold the buffer and memory
+
+    VkBufferCreateInfo bufferInfo{};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;    // Set the structure type
+    bufferInfo.size = vertexAllocSize;                          // size of the mesh
+    bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;       // for vertex buffers
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VkResult err = mDeviceFunctions->vkCreateBuffer(mWindow->device(), &bufferInfo, nullptr, &visualObject->mBuffer);
+    if (err != VK_SUCCESS)
+    {
+        qFatal("Failed to create vertex buffer: %d", err);
+    }
+
+    VkMemoryRequirements memoryRequirements;
+    mDeviceFunctions->vkGetBufferMemoryRequirements(mWindow->device(), visualObject->mBuffer, &memoryRequirements);
+
+    // Manually find a memory type that is host visible
+    uint32_t chosenMemoryType = findMemoryType(memoryRequirements.memoryTypeBits,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    VkMemoryAllocateInfo memoryAllocateInfo{};
+    memoryAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memoryAllocateInfo.allocationSize = memoryRequirements.size;
+    memoryAllocateInfo.memoryTypeIndex = chosenMemoryType;      //Qt has a helper function for this mWindow->hostVisibleMemoryIndex();
+
+    err = mDeviceFunctions->vkAllocateMemory(mWindow->device(), &memoryAllocateInfo, nullptr, &visualObject->mBufferMemory);
+    if (err != VK_SUCCESS)
+    {
+        qFatal("Failed to allocate buffer memory: %d", err);
+    }
+
+    mDeviceFunctions->vkBindBufferMemory(mWindow->device(), visualObject->mBuffer, visualObject->mBufferMemory, 0);
+
+    void* data{ nullptr };
+    mDeviceFunctions->vkMapMemory(mWindow->device(), visualObject->mBufferMemory, 0, bufferInfo.size, 0, &data);
+
+    memcpy(data, visualObject->getVertices().data(), bufferInfo.size);
+    mDeviceFunctions->vkUnmapMemory(mWindow->device(), visualObject->mBufferMemory);
+}
+
 // Dag 240125
 // This function contains some of the body of our former Renderer::initResources() function
 // If we want to have more objects, we need to initialize buffers for each of them
 // This version is not a version with encapsulation
 // We use the VisualObject members mBuffer and mBufferMemory
-void Renderer::createBuffer(VkDevice logicalDevice, const VkDeviceSize uniAlign,
+void Renderer::createBuffer(VkDevice logicalDevice, const VkDeviceSize uniformAlignment,
                                 VisualObject* visualObject, VkBufferUsageFlags usage)
 {
-    VkDeviceSize vertexAllocSize = aligned(visualObject->getVertices().size() * sizeof(Vertex), uniAlign);
+    //Gets the size of the mesh - aligned to the uniform alignment
+    VkDeviceSize vertexAllocSize = aligned(visualObject->getVertices().size() * sizeof(Vertex), uniformAlignment);
 
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO; // Set the structure type
@@ -491,16 +568,7 @@ void Renderer::releaseResources()
         mDescriptorPool = VK_NULL_HANDLE;
     }
 
-    if (mVisualObject.mBuffer) {
-        mDeviceFunctions->vkDestroyBuffer(dev, mVisualObject.mBuffer, nullptr);
-        mVisualObject.mBuffer = VK_NULL_HANDLE;
-    }
-
-    if (mVisualObject.mBufferMemory) {
-        mDeviceFunctions->vkFreeMemory(dev, mVisualObject.mBufferMemory, nullptr);
-        mVisualObject.mBufferMemory = VK_NULL_HANDLE;
-    }
-    // Samme for alle objekter i container
+    // Free buffers and memory for all objects in container
     for (auto it=mObjects.begin(); it!=mObjects.end(); it++) {
         if ((*it)->mBuffer) {
             mDeviceFunctions->vkDestroyBuffer(dev, (*it)->mBuffer, nullptr);
@@ -513,5 +581,35 @@ void Renderer::releaseResources()
             (*it)->mBuffer = VK_NULL_HANDLE;
         }
     }
+}
+
+//Helper function to find the memory type - Qt has this built in, but it is hidden
+uint32_t Renderer::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags requiredProperties)
+{
+    VkPhysicalDeviceMemoryProperties memoryProperties;
+
+    // Get the QVulkanFunctions instance - pretty hidden in Qt
+    QVulkanFunctions* vulkanFunctions = mWindow->vulkanInstance()->functions();
+    vulkanFunctions->vkGetPhysicalDeviceMemoryProperties(mWindow->physicalDevice(), &memoryProperties);
+    std::vector<VkMemoryType> memoryTypes; //getting the memory types
+    for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++)
+    {
+        memoryTypes.push_back(memoryProperties.memoryTypes[i]);
+    }
+
+    //uint32_t chosenMemoryType{ 0 };
+    for (uint32_t i = 0; i < memoryTypes.size(); i++)
+    {
+        bool isSuitable = (typeFilter & (1 << i));
+        //CPU memory
+        bool isHostVisible = (memoryTypes[i].propertyFlags & requiredProperties);
+        if (isSuitable && isHostVisible)
+        {
+            return i;
+        }
+    }
+    qFatal("Failed to find memory type! This will crash!");
+
+    return 0;
 }
 

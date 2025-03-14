@@ -7,13 +7,13 @@
 #include <iostream>
 
 struct  Vertex {
-    float x;
+    float x;    //Position
     float y;
     float z;
-    float r;
+	float r;	//Color
     float g;
     float b;
-    float u;
+	float u;	//Texture coordinates (UV)
     float v;
     //! Overloaded ostream operator which writes all vertex data on an open textfile stream
     friend std::ostream& operator<< (std::ostream&, const Vertex&);

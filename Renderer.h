@@ -73,13 +73,18 @@ private:
     friend class VulkanWindow;
     Triangle mTriangle;
     TriangleSurface mSurface;
-    VisualObject mVisualObject;
     std::vector<VisualObject*> mObjects;
     std::unordered_map<std::string, VisualObject*> mMap;    // alternativ container
 
     void createBuffer(VkDevice logicalDevice,
                       const VkDeviceSize uniAlign, VisualObject* visualObject,
                       VkBufferUsageFlags usage=VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+
+	//Start of Uniforms and DescriptorSets
+	void createVertexBuffer(const VkDeviceSize uniformAlignment, VisualObject* visualObject);
+    void createDescriptorSetLayouts();
+    void createUniformBuffer();
+	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags requiredProperties);
 
     Camera mCamera;
     class VulkanWindow* mVulkanWindow{ nullptr };
