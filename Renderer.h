@@ -85,6 +85,7 @@ private:
 
 	//Start of Uniforms and DescriptorSets
 	void createVertexBuffer(const VkDeviceSize uniformAlignment, VisualObject* visualObject);
+	void createIndexBuffer(const VkDeviceSize uniformAlignment, VisualObject* visualObject);
     void createDescriptorSetLayouts();
     void createUniformBuffer();
     void DestroyBuffer(BufferHandle handle);

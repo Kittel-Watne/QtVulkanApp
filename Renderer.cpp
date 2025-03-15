@@ -64,6 +64,9 @@ void Renderer::initResources()
     {
 		createVertexBuffer(uniAlign, *it);                //New version - more explicit to how Vulkan does it
 		//createBuffer(logicalDevice, uniAlign, *it);         //Old version 
+
+		if ((*it)->getIndices().size() > 0) //If object has indices
+			createIndexBuffer(uniAlign, *it);
     }
 
     //DescriptorSets must be made before the Pipelines
@@ -266,14 +269,22 @@ void Renderer::startNextFrame()
     /********************************* Our draw call!: *********************************/
     for (std::vector<VisualObject*>::iterator it=mObjects.begin(); it!=mObjects.end(); it++)
     {
+        //Draw type
 		if ((*it)->getDrawType() == 0)
 			mDeviceFunctions->vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline1);
 		else
 			mDeviceFunctions->vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline2);
 
-        mDeviceFunctions->vkCmdBindVertexBuffers(commandBuffer, 0, 1, &(*it)->getBuffer(), &vbOffset);
         setModelMatrix(mCamera.cMatrix() * (*it)->getMatrix());
-        mDeviceFunctions->vkCmdDraw(commandBuffer, (*it)->getVertices().size(), 1, 0, 0);
+        mDeviceFunctions->vkCmdBindVertexBuffers(commandBuffer, 0, 1, &(*it)->getVBuffer(), &vbOffset);
+		//Check if we have an index buffer - if so, use Indexed draw
+        if ((*it)->getIndices().size() > 0)
+        {
+			mDeviceFunctions->vkCmdBindIndexBuffer(commandBuffer, (*it)->getIBuffer(), 0, VK_INDEX_TYPE_UINT32);
+			mDeviceFunctions->vkCmdDrawIndexed(commandBuffer, (*it)->getIndices().size(), 1, 0, 0, 0); //size == number of indices
+		}
+		else   //No index buffer - use regular draw
+			mDeviceFunctions->vkCmdDraw(commandBuffer, (*it)->getVertices().size(), 1, 0, 0);   
     }
     /***************************************/
 
@@ -399,12 +410,12 @@ void Renderer::createBuffer(VkDevice logicalDevice, const VkDeviceSize uniformAl
     bufferInfo.size = vertexAllocSize; //One vertex buffer (we don't use Uniform buffer in this example)
     bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT; // Set the usage vertex buffer (not using Uniform buffer in this example)
 
-    VkResult err = mDeviceFunctions->vkCreateBuffer(logicalDevice, &bufferInfo, nullptr, &visualObject->getBuffer());
+    VkResult err = mDeviceFunctions->vkCreateBuffer(logicalDevice, &bufferInfo, nullptr, &visualObject->getVBuffer());
     if (err != VK_SUCCESS)
         qFatal("Failed to create buffer: %d", err);
 
     VkMemoryRequirements memReq;
-    mDeviceFunctions->vkGetBufferMemoryRequirements(logicalDevice, visualObject->getBuffer(), &memReq);
+    mDeviceFunctions->vkGetBufferMemoryRequirements(logicalDevice, visualObject->getVBuffer(), &memReq);
 
     VkMemoryAllocateInfo memAllocInfo{};
     memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -412,22 +423,22 @@ void Renderer::createBuffer(VkDevice logicalDevice, const VkDeviceSize uniformAl
 	memAllocInfo.allocationSize = memReq.size;
 	memAllocInfo.memoryTypeIndex = mWindow->hostVisibleMemoryIndex();
 
-    err = mDeviceFunctions->vkAllocateMemory(logicalDevice, &memAllocInfo, nullptr, &visualObject->getBufferMemory());
+    err = mDeviceFunctions->vkAllocateMemory(logicalDevice, &memAllocInfo, nullptr, &visualObject->getVBufferMemory());
     if (err != VK_SUCCESS)
         qFatal("Failed to allocate memory: %d", err);
 
-    err = mDeviceFunctions->vkBindBufferMemory(logicalDevice, visualObject->getBuffer(), visualObject->getBufferMemory(), 0);
+    err = mDeviceFunctions->vkBindBufferMemory(logicalDevice, visualObject->getVBuffer(), visualObject->getVBufferMemory(), 0);
     if (err != VK_SUCCESS)
         qFatal("Failed to bind buffer memory: %d", err);
 
     void* p{nullptr};
-    err = mDeviceFunctions->vkMapMemory(logicalDevice, visualObject->getBufferMemory(), 0, memReq.size, 0, reinterpret_cast<void **>(&p));
+    err = mDeviceFunctions->vkMapMemory(logicalDevice, visualObject->getVBufferMemory(), 0, memReq.size, 0, reinterpret_cast<void **>(&p));
     if (err != VK_SUCCESS)
         qFatal("Failed to map memory: %d", err);
 
     memcpy(p, visualObject->getVertices().data(), visualObject->getVertices().size()*sizeof(Vertex));
 
-    mDeviceFunctions->vkUnmapMemory(logicalDevice, visualObject->getBufferMemory());
+    mDeviceFunctions->vkUnmapMemory(logicalDevice, visualObject->getVBufferMemory());
 }
 //Very similar to createBuffer, but here we find and set the memory type explicitly
 //Also the generation of the buffer is in a separate function
@@ -437,7 +448,7 @@ void Renderer::createVertexBuffer(const VkDeviceSize uniformAlignment, VisualObj
     //Get the size of the mesh and align it to the uniform alignment
     VkDeviceSize vertexAllocSize = aligned(visualObject->getVertices().size() * sizeof(Vertex), uniformAlignment);
 
-	BufferHandle stagingHandle = createGeneralBuffer(vertexAllocSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+	BufferHandle stagingHandle = createGeneralBuffer(vertexAllocSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, //Transfer source bit is for copying data to the GPU
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);    // Host visible memory (CPU) is slower to access than device local memory (GPU)
 
     void* data{ nullptr };
@@ -450,8 +461,8 @@ void Renderer::createVertexBuffer(const VkDeviceSize uniformAlignment, VisualObj
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT); // Device local memory (GPU VRam) is faster to access than host visible memory (CPU RAM)
 	
     //Set the buffer and buffer memory in the VisualObject for use in the draw call
-	visualObject->setBuffer(gpuHandle.mBuffer);
-	visualObject->setBufferMemory(gpuHandle.mBufferMemory);
+	visualObject->setVBuffer(gpuHandle.mBuffer);
+	visualObject->setVBufferMemory(gpuHandle.mBufferMemory);
 
     //Copy the data from the staging buffer to the GPU buffer
 	VkCommandBuffer commandBuffer = BeginTransientCommandBuffer();
@@ -463,6 +474,42 @@ void Renderer::createVertexBuffer(const VkDeviceSize uniformAlignment, VisualObj
 	EndTransientCommandBuffer(commandBuffer);
 	
     //Free the staging buffer
+	DestroyBuffer(stagingHandle);
+}
+
+void Renderer::createIndexBuffer(const VkDeviceSize uniformAlignment, VisualObject* visualObject)
+{
+	//Get the size of the mesh and align it to the uniform alignment
+	VkDeviceSize indexAllocSize = aligned(visualObject->getIndices().size() * sizeof(uint32_t), uniformAlignment);
+
+	//Create a staging buffer for the index data
+	BufferHandle stagingHandle = createGeneralBuffer(indexAllocSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);    // Host visible memory (CPU) is slower to access than device local memory (GPU)
+	
+    void* data{ nullptr };
+	mDeviceFunctions->vkMapMemory(mWindow->device(), stagingHandle.mBufferMemory, 0, indexAllocSize, 0, &data);
+	memcpy(data, visualObject->getIndices().data(), indexAllocSize);
+	mDeviceFunctions->vkUnmapMemory(mWindow->device(), stagingHandle.mBufferMemory);
+
+    //This is for copying the data to the GPU
+	BufferHandle gpuHandle = createGeneralBuffer(indexAllocSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT); // Device local memory (GPU VRam) is faster to access than host visible memory (CPU RAM)
+
+	//Set the buffer and buffer memory in the VisualObject for use in the draw call
+	visualObject->setIBuffer(gpuHandle.mBuffer);
+	visualObject->setIBufferMemory(gpuHandle.mBufferMemory);
+
+	//Copy the data from the staging buffer to the GPU buffer:
+	VkCommandBuffer commandBuffer = BeginTransientCommandBuffer();
+
+	VkBufferCopy copyRegion{};
+	copyRegion.srcOffset = 0;
+	copyRegion.dstOffset = 0;
+	copyRegion.size = indexAllocSize;
+	mDeviceFunctions->vkCmdCopyBuffer(commandBuffer, stagingHandle.mBuffer, gpuHandle.mBuffer, 1, &copyRegion);
+	EndTransientCommandBuffer(commandBuffer);
+
+	//Free the staging buffer
 	DestroyBuffer(stagingHandle);
 }
 
@@ -593,10 +640,10 @@ void Renderer::releaseResources()
 
     // Free buffers and memory for all objects in container
     for (auto it=mObjects.begin(); it!=mObjects.end(); it++) {
-        if ((*it)->getBuffer()) {
-			BufferHandle handle { (*it)->getBufferMemory(), (*it)->getBuffer() };
+        if ((*it)->getVBuffer()) {
+			BufferHandle handle { (*it)->getVBufferMemory(), (*it)->getVBuffer() };
 			DestroyBuffer(handle);
-            (*it)->getBuffer() = VK_NULL_HANDLE;
+            (*it)->getVBuffer() = VK_NULL_HANDLE;
         }
     }
 }

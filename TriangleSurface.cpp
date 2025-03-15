@@ -12,10 +12,15 @@ TriangleSurface::TriangleSurface() : VisualObject()
     mVertices.push_back(v1);
     mVertices.push_back(v2);
     mVertices.push_back(v3);
-    //then the 2nd.
-    mVertices.push_back(v3);
-    mVertices.push_back(v2);
     mVertices.push_back(v4);
+
+	//Indexes for the two triangles to form a quad
+	mIndices.push_back(0);
+	mIndices.push_back(1);
+	mIndices.push_back(2);
+	mIndices.push_back(2);
+	mIndices.push_back(1);
+	mIndices.push_back(3);
 
     //Temporary scale and positioning
     mMatrix.scale(0.5f);
