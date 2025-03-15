@@ -19,6 +19,7 @@ qt_add_executable(QtVulkanApp
     Input.h
     WorldAxis.h WorldAxis.cpp
     UniformTransformations.h UniformTransformations.cpp
+    Utilities.h
 )
 # Define the shader files
 set(SHADER_FILES

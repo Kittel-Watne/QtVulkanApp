@@ -5,13 +5,6 @@
 #include "VulkanWindow.h"
 #include "WorldAxis.h"
 
-//Utility function for alignment:
-static inline VkDeviceSize aligned(VkDeviceSize v, VkDeviceSize byteAlign)
-{
-    return (v + byteAlign - 1) & ~(byteAlign - 1);
-}
-
-
 /*** Renderer class ***/
 Renderer::Renderer(QVulkanWindow *w, bool msaa)
 	: mWindow(w)
@@ -92,7 +85,7 @@ void Renderer::initResources()
 	vertexAttrDesc[1].location = 1;
 	vertexAttrDesc[1].binding = 0;
 	vertexAttrDesc[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-	vertexAttrDesc[1].offset = 3 * sizeof(float);
+	vertexAttrDesc[1].offset = 3 * sizeof(float);           // could use offsetof(Vertex, r); from <cstddef>
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{};	    // C++11: {} is the same as memset(&bufferInfo, 0, sizeof(bufferInfo));
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -387,52 +380,7 @@ void Renderer::createUniformBuffer()
     VkDeviceSize bufferSize = sizeof(UniformTransformations);
 }
 
-//Very !!! similar to createBuffer, but here we find and set the memory type explicitly
-void Renderer::createVertexBuffer(const VkDeviceSize uniformAlignment, VisualObject* visualObject)
-{
-    //Gets the size of the mesh - aligned to the uniform alignment
-    VkDeviceSize vertexAllocSize = aligned(visualObject->getVertices().size() * sizeof(Vertex), uniformAlignment);
 
-    //BufferHandle bufferHandle;  //Small helper object to hold the buffer and memory
-
-    VkBufferCreateInfo bufferInfo{};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;    // Set the structure type
-    bufferInfo.size = vertexAllocSize;                          // size of the mesh
-    bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;       // for vertex buffers
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    VkResult err = mDeviceFunctions->vkCreateBuffer(mWindow->device(), &bufferInfo, nullptr, &visualObject->getBuffer());
-    if (err != VK_SUCCESS)
-    {
-        qFatal("Failed to create vertex buffer: %d", err);
-    }
-
-    VkMemoryRequirements memoryRequirements;
-    mDeviceFunctions->vkGetBufferMemoryRequirements(mWindow->device(), visualObject->getBuffer(), &memoryRequirements);
-
-    // Manually find a memory type that is host visible
-    uint32_t chosenMemoryType = findMemoryType(memoryRequirements.memoryTypeBits,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-    VkMemoryAllocateInfo memoryAllocateInfo{};
-    memoryAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    memoryAllocateInfo.allocationSize = memoryRequirements.size;
-    memoryAllocateInfo.memoryTypeIndex = chosenMemoryType;      //Qt has a helper function for this mWindow->hostVisibleMemoryIndex();
-
-    err = mDeviceFunctions->vkAllocateMemory(mWindow->device(), &memoryAllocateInfo, nullptr, &visualObject->getBufferMemory());
-    if (err != VK_SUCCESS)
-    {
-        qFatal("Failed to allocate buffer memory: %d", err);
-    }
-
-    mDeviceFunctions->vkBindBufferMemory(mWindow->device(), visualObject->getBuffer(), visualObject->getBufferMemory(), 0);
-
-    void* data{ nullptr };
-    mDeviceFunctions->vkMapMemory(mWindow->device(), visualObject->getBufferMemory(), 0, bufferInfo.size, 0, &data);
-
-    memcpy(data, visualObject->getVertices().data(), bufferInfo.size);
-    mDeviceFunctions->vkUnmapMemory(mWindow->device(), visualObject->getBufferMemory());
-}
 
 // Dag 240125
 // This function contains some of the body of our former Renderer::initResources() function
@@ -479,6 +427,62 @@ void Renderer::createBuffer(VkDevice logicalDevice, const VkDeviceSize uniformAl
     memcpy(p, visualObject->getVertices().data(), visualObject->getVertices().size()*sizeof(Vertex));
 
     mDeviceFunctions->vkUnmapMemory(logicalDevice, visualObject->getBufferMemory());
+}
+//Very similar to createBuffer, but here we find and set the memory type explicitly
+//Also the generation of the buffer is in a separate function
+void Renderer::createVertexBuffer(const VkDeviceSize uniformAlignment, VisualObject* visualObject)
+{
+    //Get the size of the mesh and align it to the uniform alignment
+    VkDeviceSize vertexAllocSize = aligned(visualObject->getVertices().size() * sizeof(Vertex), uniformAlignment);
+
+	BufferHandle bufferHandle = createGeneralBuffer(vertexAllocSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	//Set the buffer and buffer memory in the VisualObject for use in the draw call
+	visualObject->setBuffer(bufferHandle.mBuffer);
+	visualObject->setBufferMemory(bufferHandle.mBufferMemory);
+
+    void* data{ nullptr };
+    mDeviceFunctions->vkMapMemory(mWindow->device(), visualObject->getBufferMemory(), 0, vertexAllocSize, 0, &data);
+
+    memcpy(data, visualObject->getVertices().data(), vertexAllocSize);
+    mDeviceFunctions->vkUnmapMemory(mWindow->device(), visualObject->getBufferMemory());
+}
+
+BufferHandle Renderer::createGeneralBuffer(const VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
+{
+    BufferHandle bufferHandle{};
+
+    VkBufferCreateInfo bufferInfo{};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;    // set the structure type
+    bufferInfo.size = size;                                     // size of the wanted buffer
+    bufferInfo.usage = usage;                                   // buffer usage type
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VkResult err = mDeviceFunctions->vkCreateBuffer(mWindow->device(), &bufferInfo, nullptr, &bufferHandle.mBuffer);
+    if (err != VK_SUCCESS)
+    {
+        qFatal("Failed to create general buffer: %d", err);
+    }
+
+    VkMemoryRequirements memoryRequirements;
+    mDeviceFunctions->vkGetBufferMemoryRequirements(mWindow->device(), bufferHandle.mBuffer, &memoryRequirements);
+
+    // Manually find a memory type
+    uint32_t chosenMemoryType = findMemoryType(memoryRequirements.memoryTypeBits, properties);
+
+    VkMemoryAllocateInfo memoryAllocateInfo{};
+    memoryAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memoryAllocateInfo.allocationSize = memoryRequirements.size;
+    memoryAllocateInfo.memoryTypeIndex = chosenMemoryType;      //Qt has a helper function for this mWindow->hostVisibleMemoryIndex();
+
+    err = mDeviceFunctions->vkAllocateMemory(mWindow->device(), &memoryAllocateInfo, nullptr, &bufferHandle.mBufferMemory);
+    if (err != VK_SUCCESS)
+    {
+        qFatal("Failed to allocate buffer memory: %d", err);
+    }
+
+    mDeviceFunctions->vkBindBufferMemory(mWindow->device(), bufferHandle.mBuffer, bufferHandle.mBufferMemory, 0);
+
+    return bufferHandle;
 }
 
 void Renderer::getVulkanHWInfo()
@@ -611,5 +615,44 @@ uint32_t Renderer::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags req
     qFatal("Failed to find memory type! This will crash!");
 
     return 0;
+}
+
+
+// OEF: This function is used to create a command buffer that is short lived and not a part of the Rendering command
+VkCommandBuffer Renderer::BeginTransientCommandBuffer()
+{
+	VkCommandBufferAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandPool = mWindow->graphicsCommandPool();
+	allocInfo.commandBufferCount = 1;
+	
+	VkCommandBuffer commandBuffer;
+    mDeviceFunctions->vkAllocateCommandBuffers(mWindow->device(), &allocInfo, &commandBuffer);
+
+	VkCommandBufferBeginInfo beginInfo{};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	mDeviceFunctions->vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+	return commandBuffer;
+}
+
+// OEF: This function is used to end a short lived command buffer
+void Renderer::EndTransientCommandBuffer(VkCommandBuffer commandBuffer)
+{
+	VkSubmitInfo submitInfo{};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffer;
+
+	//This is the way to submit a command buffer in Vulkan
+    //mDeviceFunctions->vkQueueSubmit(graphicsqueue, 1, &submitInfo, VK_NULL_HANDLE);
+    //mDeviceFunctions->vkQueueWaitIdle(graphicsqueue);
+    //vkFreeCommandBuffer(logicalDevice, commandpool, 1, &commandBuffer);
+
+	//Not sure if this is the correct way to do it
+	mDeviceFunctions->vkEndCommandBuffer(commandBuffer);
 }
 

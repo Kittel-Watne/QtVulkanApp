@@ -8,6 +8,7 @@
 #include "Triangle.h"
 #include "TriangleSurface.h"
 #include "VisualObject.h"
+#include "Utilities.h"
 
 class Renderer : public QVulkanWindowRenderer
 {
@@ -86,8 +87,14 @@ private:
     void createUniformBuffer();
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags requiredProperties);
 
+	BufferHandle createGeneralBuffer(const VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
+
     Camera mCamera;
     class VulkanWindow* mVulkanWindow{ nullptr };
+
+	VkCommandBuffer BeginTransientCommandBuffer();
+	void EndTransientCommandBuffer(VkCommandBuffer commandBuffer);
+
 };
 
 #endif // RENDERER_H
