@@ -116,8 +116,6 @@ void Renderer::initResources()
     pipelineLayoutInfo.setLayoutCount = 0;
     pipelineLayoutInfo.pushConstantRangeCount = 1;                  // PushConstants update
     pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;    // PushConstants update
-    pipelineLayoutInfo.setLayoutCount = 1;                          // Uniforms / DescriptorSet update
-    pipelineLayoutInfo.pSetLayouts = &mDescriptorSetLayout;
     result = mDeviceFunctions->vkCreatePipelineLayout(logicalDevice, &pipelineLayoutInfo, nullptr, &mPipelineLayout);
     if (result != VK_SUCCESS)
         qFatal("Failed to create pipeline layout: %d", result);
@@ -602,16 +600,6 @@ void Renderer::releaseResources()
     if (mPipelineCache) {
         mDeviceFunctions->vkDestroyPipelineCache(dev, mPipelineCache, nullptr);
         mPipelineCache = VK_NULL_HANDLE;
-    }
-
-    if (mDescriptorSetLayout) {
-        mDeviceFunctions->vkDestroyDescriptorSetLayout(dev, mDescriptorSetLayout, nullptr);
-        mDescriptorSetLayout = VK_NULL_HANDLE;
-    }
-
-    if (mDescriptorPool) {
-        mDeviceFunctions->vkDestroyDescriptorPool(dev, mDescriptorPool, nullptr);
-        mDescriptorPool = VK_NULL_HANDLE;
     }
 
     // Free buffers and memory for all objects in container
