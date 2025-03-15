@@ -110,17 +110,17 @@ void Renderer::initResources()
 
     // Pipeline layout
     // Set up the push constant info
-    VkPushConstantRange pushConstantRange{};    //Updated to more common way to write it
+    VkPushConstantRange pushConstantRange{};                //Updated to more common way to write it
     pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     pushConstantRange.offset = 0;
-    pushConstantRange.size = 16 * sizeof(float); // 16 floats for the model matrix
+    pushConstantRange.size = 16 * sizeof(float);            // 16 floats for the model matrix
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 0;
-    pipelineLayoutInfo.pushConstantRangeCount = 1;  // OEF: PushConstants update
-    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange; // OEF: PushConstants update
-    pipelineLayoutInfo.setLayoutCount = 1;          //OEF: Uniforms / DescriptorSet update
+    pipelineLayoutInfo.pushConstantRangeCount = 1;                  // PushConstants update
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;    // PushConstants update
+    pipelineLayoutInfo.setLayoutCount = 1;                          // Uniforms / DescriptorSet update
     pipelineLayoutInfo.pSetLayouts = &mDescriptorSetLayout;
     result = mDeviceFunctions->vkCreatePipelineLayout(logicalDevice, &pipelineLayoutInfo, nullptr, &mPipelineLayout);
     if (result != VK_SUCCESS)
@@ -325,9 +325,8 @@ VkShaderModule Renderer::createShader(const QString &name)
 
 void Renderer::setModelMatrix(QMatrix4x4 modelMatrix)
 {
-
 	mDeviceFunctions->vkCmdPushConstants(mWindow->currentCommandBuffer(), mPipelineLayout, 
-        VK_SHADER_STAGE_VERTEX_BIT, 0, 16 * sizeof(float), modelMatrix.constData());
+		VK_SHADER_STAGE_VERTEX_BIT, 0, 16 * sizeof(float), modelMatrix.constData());    //Column-major matrix
 }
 
 void Renderer::setRenderPassParameters(VkCommandBuffer commandBuffer)
