@@ -83,11 +83,9 @@ private:
                       const VkDeviceSize uniAlign, VisualObject* visualObject,
                       VkBufferUsageFlags usage=VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 
-	//Start of Uniforms and DescriptorSets
+	//Updated to a more flexible way of making buffers
 	void createVertexBuffer(const VkDeviceSize uniformAlignment, VisualObject* visualObject);
 	void createIndexBuffer(const VkDeviceSize uniformAlignment, VisualObject* visualObject);
-    void createDescriptorSetLayouts();
-    void createUniformBuffer();
     void DestroyBuffer(BufferHandle handle);
 
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags requiredProperties);

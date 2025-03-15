@@ -1,7 +1,6 @@
 #include "Renderer.h"
 #include <QVulkanFunctions>
 #include <QFile>
-#include "UniformTransformations.h"
 #include "VulkanWindow.h"
 #include "WorldAxis.h"
 
@@ -68,9 +67,6 @@ void Renderer::initResources()
 		if ((*it)->getIndices().size() > 0) //If object has indices
 			createIndexBuffer(uniAlign, *it);
     }
-
-    //DescriptorSets must be made before the Pipelines
-    createDescriptorSetLayouts();
 
     /********************************* Vertex layout: *********************************/
 	VkVertexInputBindingDescription vertexBindingDesc{};    //Updated to a more common way to write it
@@ -367,31 +363,6 @@ void Renderer::setRenderPassParameters(VkCommandBuffer commandBuffer)
     scissor.extent.height = viewport.height;
     mDeviceFunctions->vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 }
-
-void Renderer::createDescriptorSetLayouts()
-{
-    VkDescriptorSetLayoutBinding uniformLayoutBinding{};
-    uniformLayoutBinding.binding = 0;
-    uniformLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    uniformLayoutBinding.descriptorCount = 1;
-    uniformLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = 1;
-    layoutInfo.pBindings = &uniformLayoutBinding;
-
-    VkResult err = mDeviceFunctions->vkCreateDescriptorSetLayout(mWindow->device(), &layoutInfo, nullptr, &mDescriptorSetLayout);
-    if (err != VK_SUCCESS)
-        qFatal("Failed to create DescriptorSetLayout: %d", err);
-}
-
-void Renderer::createUniformBuffer()
-{
-    VkDeviceSize bufferSize = sizeof(UniformTransformations);
-}
-
-
 
 // Dag 240125
 // This function contains some of the body of our former Renderer::initResources() function
