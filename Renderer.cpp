@@ -39,7 +39,7 @@ Renderer::Renderer(QVulkanWindow *w, bool msaa)
 	//Inital position of the camera
     mCamera.setPosition(QVector3D(-1, -1, -4));
 
-    //OEF: need access to our VulkanWindow so making a convenience pointer
+    //Need access to our VulkanWindow so making a convenience pointer
     mVulkanWindow = dynamic_cast<VulkanWindow*>(w);
 }
 
@@ -50,19 +50,20 @@ void Renderer::initResources()
     VkDevice logicalDevice = mWindow->device();
     mDeviceFunctions = mWindow->vulkanInstance()->deviceFunctions(logicalDevice);
 
-    /* Prepare the vertex and uniform data.The vertex data will never
-    change so one buffer is sufficient regardless of the value of
-    QVulkanWindow::CONCURRENT_FRAME_COUNT. */
+    // Initialize the graphics queue
+    uint32_t graphicsQueueFamilyIndex = mWindow->graphicsQueueFamilyIndex();
+    mDeviceFunctions->vkGetDeviceQueue(logicalDevice, graphicsQueueFamilyIndex, 0, &mGraphicsQueue);
 
     const int concurrentFrameCount = mWindow->concurrentFrameCount(); // 2 on Oles Machine
     const VkPhysicalDeviceLimits *pdevLimits = &mWindow->physicalDeviceProperties()->limits;
     const VkDeviceSize uniAlign = pdevLimits->minUniformBufferOffsetAlignment;
     qDebug("Uniform buffer offset alignment is %u", (uint)uniAlign); //64 on Oles machine
 
-	/// Dag 240125: Create correct buffers for all objects in mObjects with createBuffer() function
+	// Create correct buffers for all objects in mObjects with createBuffer() function
     for (auto it=mObjects.begin(); it!=mObjects.end(); it++)
     {
-        createVertexBuffer(uniAlign, *it);
+		createVertexBuffer(uniAlign, *it);                //New version - more explicit to how Vulkan does it
+		//createBuffer(logicalDevice, uniAlign, *it);         //Old version 
     }
 
     //DescriptorSets must be made before the Pipelines
@@ -235,7 +236,7 @@ void Renderer::initResources()
     getVulkanHWInfo(); // if you want to get info about the Vulkan hardware
 }
 
-// This function is called at startup and when the app window is resized
+// This function is called at startup, and when the app window is resized
 void Renderer::initSwapChainResources()
 {
     qDebug("\n ***************************** initSwapChainResources ******************************************* \n");
@@ -251,7 +252,7 @@ void Renderer::initSwapChainResources()
 
 void Renderer::startNextFrame()
 {
-    //OEF: Handeling input from keyboard and mouse is done in VulkanWindow
+    //Handeling input from keyboard and mouse is done in VulkanWindow
     //Has to be done each frame to get smooth movement
     mVulkanWindow->handleInput();
     mCamera.update();               //input can have moved the camera
@@ -430,21 +431,39 @@ void Renderer::createBuffer(VkDevice logicalDevice, const VkDeviceSize uniformAl
 }
 //Very similar to createBuffer, but here we find and set the memory type explicitly
 //Also the generation of the buffer is in a separate function
+//and copy data to GPU read only memory
 void Renderer::createVertexBuffer(const VkDeviceSize uniformAlignment, VisualObject* visualObject)
 {
     //Get the size of the mesh and align it to the uniform alignment
     VkDeviceSize vertexAllocSize = aligned(visualObject->getVertices().size() * sizeof(Vertex), uniformAlignment);
 
-	BufferHandle bufferHandle = createGeneralBuffer(vertexAllocSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	//Set the buffer and buffer memory in the VisualObject for use in the draw call
-	visualObject->setBuffer(bufferHandle.mBuffer);
-	visualObject->setBufferMemory(bufferHandle.mBufferMemory);
+	BufferHandle stagingHandle = createGeneralBuffer(vertexAllocSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);    // Host visible memory (CPU) is slower to access than device local memory (GPU)
 
     void* data{ nullptr };
-    mDeviceFunctions->vkMapMemory(mWindow->device(), visualObject->getBufferMemory(), 0, vertexAllocSize, 0, &data);
-
+    mDeviceFunctions->vkMapMemory(mWindow->device(), stagingHandle.mBufferMemory, 0, vertexAllocSize, 0, &data);
     memcpy(data, visualObject->getVertices().data(), vertexAllocSize);
-    mDeviceFunctions->vkUnmapMemory(mWindow->device(), visualObject->getBufferMemory());
+    mDeviceFunctions->vkUnmapMemory(mWindow->device(), stagingHandle.mBufferMemory);
+
+	//This is for copying the data to the GPU
+    BufferHandle gpuHandle = createGeneralBuffer(vertexAllocSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT); // Device local memory (GPU VRam) is faster to access than host visible memory (CPU RAM)
+	
+    //Set the buffer and buffer memory in the VisualObject for use in the draw call
+	visualObject->setBuffer(gpuHandle.mBuffer);
+	visualObject->setBufferMemory(gpuHandle.mBufferMemory);
+
+    //Copy the data from the staging buffer to the GPU buffer
+	VkCommandBuffer commandBuffer = BeginTransientCommandBuffer();
+	VkBufferCopy copyRegion{};
+	copyRegion.srcOffset = 0;
+	copyRegion.dstOffset = 0;
+	copyRegion.size = vertexAllocSize;
+	mDeviceFunctions->vkCmdCopyBuffer(commandBuffer, stagingHandle.mBuffer, gpuHandle.mBuffer, 1, &copyRegion);
+	EndTransientCommandBuffer(commandBuffer);
+	
+    //Free the staging buffer
+	DestroyBuffer(stagingHandle);
 }
 
 BufferHandle Renderer::createGeneralBuffer(const VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
@@ -575,13 +594,8 @@ void Renderer::releaseResources()
     // Free buffers and memory for all objects in container
     for (auto it=mObjects.begin(); it!=mObjects.end(); it++) {
         if ((*it)->getBuffer()) {
-            mDeviceFunctions->vkDestroyBuffer(dev, (*it)->getBuffer(), nullptr);
-            (*it)->getBuffer() = VK_NULL_HANDLE;
-        }
-    }
-    for (auto it=mObjects.begin(); it!=mObjects.end(); it++) {
-        if ((*it)->getBufferMemory()) {
-            mDeviceFunctions->vkFreeMemory(dev, (*it)->getBufferMemory(), nullptr);
+			BufferHandle handle { (*it)->getBufferMemory(), (*it)->getBuffer() };
+			DestroyBuffer(handle);
             (*it)->getBuffer() = VK_NULL_HANDLE;
         }
     }
@@ -618,17 +632,17 @@ uint32_t Renderer::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags req
 }
 
 
-// OEF: This function is used to create a command buffer that is short lived and not a part of the Rendering command
+// Function to create a command buffer that is short lived and not a part of the Rendering command
 VkCommandBuffer Renderer::BeginTransientCommandBuffer()
 {
-	VkCommandBufferAllocateInfo allocInfo{};
-	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandPool = mWindow->graphicsCommandPool();
-	allocInfo.commandBufferCount = 1;
+	VkCommandBufferAllocateInfo allocateInfo{};
+	allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocateInfo.commandPool = mWindow->graphicsCommandPool();
+	allocateInfo.commandBufferCount = 1;
 	
 	VkCommandBuffer commandBuffer;
-    mDeviceFunctions->vkAllocateCommandBuffers(mWindow->device(), &allocInfo, &commandBuffer);
+    mDeviceFunctions->vkAllocateCommandBuffers(mWindow->device(), &allocateInfo, &commandBuffer);
 
 	VkCommandBufferBeginInfo beginInfo{};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -639,20 +653,26 @@ VkCommandBuffer Renderer::BeginTransientCommandBuffer()
 	return commandBuffer;
 }
 
-// OEF: This function is used to end a short lived command buffer
+// Function to end a short lived command buffer
 void Renderer::EndTransientCommandBuffer(VkCommandBuffer commandBuffer)
 {
+    mDeviceFunctions->vkEndCommandBuffer(commandBuffer);
+
 	VkSubmitInfo submitInfo{};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &commandBuffer;
 
 	//This is the way to submit a command buffer in Vulkan
-    //mDeviceFunctions->vkQueueSubmit(graphicsqueue, 1, &submitInfo, VK_NULL_HANDLE);
-    //mDeviceFunctions->vkQueueWaitIdle(graphicsqueue);
-    //vkFreeCommandBuffer(logicalDevice, commandpool, 1, &commandBuffer);
+    mDeviceFunctions->vkQueueSubmit(mGraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    //mDeviceFunctions->vkQueueWaitIdle(mGraphicsQueue);
+	mDeviceFunctions->vkFreeCommandBuffers(mWindow->device(), mWindow->graphicsCommandPool(), 1, &commandBuffer);
+}
 
-	//Not sure if this is the correct way to do it
-	mDeviceFunctions->vkEndCommandBuffer(commandBuffer);
+// Function to destroy a buffer and its memory
+void Renderer::DestroyBuffer(BufferHandle handle) {
+    mDeviceFunctions->vkDeviceWaitIdle(mWindow->device());
+    mDeviceFunctions->vkDestroyBuffer(mWindow->device(), handle.mBuffer, nullptr);
+    mDeviceFunctions->vkFreeMemory(mWindow->device(), handle.mBufferMemory, nullptr);
 }
 

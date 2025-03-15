@@ -70,6 +70,8 @@ protected:
     VkPipeline mPipeline1{ VK_NULL_HANDLE };
     VkPipeline mPipeline2{ VK_NULL_HANDLE };
 
+    VkQueue mGraphicsQueue{ VK_NULL_HANDLE };
+
 private:
     friend class VulkanWindow;
     Triangle mTriangle;
@@ -85,6 +87,8 @@ private:
 	void createVertexBuffer(const VkDeviceSize uniformAlignment, VisualObject* visualObject);
     void createDescriptorSetLayouts();
     void createUniformBuffer();
+    void DestroyBuffer(BufferHandle handle);
+
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags requiredProperties);
 
 	BufferHandle createGeneralBuffer(const VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
