@@ -272,14 +272,14 @@ void Renderer::startNextFrame()
     /********************************* Our draw call!: *********************************/
     for (std::vector<VisualObject*>::iterator it=mObjects.begin(); it!=mObjects.end(); it++)
     {
-		if ((*it)->drawType == 0)
+		if ((*it)->getDrawType() == 0)
 			mDeviceFunctions->vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline1);
 		else
 			mDeviceFunctions->vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline2);
 
-        mDeviceFunctions->vkCmdBindVertexBuffers(commandBuffer, 0, 1, &(*it)->mBuffer, &vbOffset);
-        setModelMatrix(mCamera.cMatrix() * (*it)->mMatrix);
-        mDeviceFunctions->vkCmdDraw(commandBuffer, (*it)->mVertices.size(), 1, 0, 0);
+        mDeviceFunctions->vkCmdBindVertexBuffers(commandBuffer, 0, 1, &(*it)->getBuffer(), &vbOffset);
+        setModelMatrix(mCamera.cMatrix() * (*it)->getMatrix());
+        mDeviceFunctions->vkCmdDraw(commandBuffer, (*it)->getVertices().size(), 1, 0, 0);
     }
     /***************************************/
 
@@ -401,14 +401,14 @@ void Renderer::createVertexBuffer(const VkDeviceSize uniformAlignment, VisualObj
     bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;       // for vertex buffers
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    VkResult err = mDeviceFunctions->vkCreateBuffer(mWindow->device(), &bufferInfo, nullptr, &visualObject->mBuffer);
+    VkResult err = mDeviceFunctions->vkCreateBuffer(mWindow->device(), &bufferInfo, nullptr, &visualObject->getBuffer());
     if (err != VK_SUCCESS)
     {
         qFatal("Failed to create vertex buffer: %d", err);
     }
 
     VkMemoryRequirements memoryRequirements;
-    mDeviceFunctions->vkGetBufferMemoryRequirements(mWindow->device(), visualObject->mBuffer, &memoryRequirements);
+    mDeviceFunctions->vkGetBufferMemoryRequirements(mWindow->device(), visualObject->getBuffer(), &memoryRequirements);
 
     // Manually find a memory type that is host visible
     uint32_t chosenMemoryType = findMemoryType(memoryRequirements.memoryTypeBits,
@@ -419,19 +419,19 @@ void Renderer::createVertexBuffer(const VkDeviceSize uniformAlignment, VisualObj
     memoryAllocateInfo.allocationSize = memoryRequirements.size;
     memoryAllocateInfo.memoryTypeIndex = chosenMemoryType;      //Qt has a helper function for this mWindow->hostVisibleMemoryIndex();
 
-    err = mDeviceFunctions->vkAllocateMemory(mWindow->device(), &memoryAllocateInfo, nullptr, &visualObject->mBufferMemory);
+    err = mDeviceFunctions->vkAllocateMemory(mWindow->device(), &memoryAllocateInfo, nullptr, &visualObject->getBufferMemory());
     if (err != VK_SUCCESS)
     {
         qFatal("Failed to allocate buffer memory: %d", err);
     }
 
-    mDeviceFunctions->vkBindBufferMemory(mWindow->device(), visualObject->mBuffer, visualObject->mBufferMemory, 0);
+    mDeviceFunctions->vkBindBufferMemory(mWindow->device(), visualObject->getBuffer(), visualObject->getBufferMemory(), 0);
 
     void* data{ nullptr };
-    mDeviceFunctions->vkMapMemory(mWindow->device(), visualObject->mBufferMemory, 0, bufferInfo.size, 0, &data);
+    mDeviceFunctions->vkMapMemory(mWindow->device(), visualObject->getBufferMemory(), 0, bufferInfo.size, 0, &data);
 
     memcpy(data, visualObject->getVertices().data(), bufferInfo.size);
-    mDeviceFunctions->vkUnmapMemory(mWindow->device(), visualObject->mBufferMemory);
+    mDeviceFunctions->vkUnmapMemory(mWindow->device(), visualObject->getBufferMemory());
 }
 
 // Dag 240125
@@ -450,12 +450,12 @@ void Renderer::createBuffer(VkDevice logicalDevice, const VkDeviceSize uniformAl
     bufferInfo.size = vertexAllocSize; //One vertex buffer (we don't use Uniform buffer in this example)
     bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT; // Set the usage vertex buffer (not using Uniform buffer in this example)
 
-    VkResult err = mDeviceFunctions->vkCreateBuffer(logicalDevice, &bufferInfo, nullptr, &visualObject->mBuffer);
+    VkResult err = mDeviceFunctions->vkCreateBuffer(logicalDevice, &bufferInfo, nullptr, &visualObject->getBuffer());
     if (err != VK_SUCCESS)
         qFatal("Failed to create buffer: %d", err);
 
     VkMemoryRequirements memReq;
-    mDeviceFunctions->vkGetBufferMemoryRequirements(logicalDevice, visualObject->mBuffer, &memReq);
+    mDeviceFunctions->vkGetBufferMemoryRequirements(logicalDevice, visualObject->getBuffer(), &memReq);
 
     VkMemoryAllocateInfo memAllocInfo{};
     memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -463,22 +463,22 @@ void Renderer::createBuffer(VkDevice logicalDevice, const VkDeviceSize uniformAl
 	memAllocInfo.allocationSize = memReq.size;
 	memAllocInfo.memoryTypeIndex = mWindow->hostVisibleMemoryIndex();
 
-    err = mDeviceFunctions->vkAllocateMemory(logicalDevice, &memAllocInfo, nullptr, &visualObject->mBufferMemory);
+    err = mDeviceFunctions->vkAllocateMemory(logicalDevice, &memAllocInfo, nullptr, &visualObject->getBufferMemory());
     if (err != VK_SUCCESS)
         qFatal("Failed to allocate memory: %d", err);
 
-    err = mDeviceFunctions->vkBindBufferMemory(logicalDevice, visualObject->mBuffer, visualObject->mBufferMemory, 0);
+    err = mDeviceFunctions->vkBindBufferMemory(logicalDevice, visualObject->getBuffer(), visualObject->getBufferMemory(), 0);
     if (err != VK_SUCCESS)
         qFatal("Failed to bind buffer memory: %d", err);
 
     void* p{nullptr};
-    err = mDeviceFunctions->vkMapMemory(logicalDevice, visualObject->mBufferMemory, 0, memReq.size, 0, reinterpret_cast<void **>(&p));
+    err = mDeviceFunctions->vkMapMemory(logicalDevice, visualObject->getBufferMemory(), 0, memReq.size, 0, reinterpret_cast<void **>(&p));
     if (err != VK_SUCCESS)
         qFatal("Failed to map memory: %d", err);
 
     memcpy(p, visualObject->getVertices().data(), visualObject->getVertices().size()*sizeof(Vertex));
 
-    mDeviceFunctions->vkUnmapMemory(logicalDevice, visualObject->mBufferMemory);
+    mDeviceFunctions->vkUnmapMemory(logicalDevice, visualObject->getBufferMemory());
 }
 
 void Renderer::getVulkanHWInfo()
@@ -570,15 +570,15 @@ void Renderer::releaseResources()
 
     // Free buffers and memory for all objects in container
     for (auto it=mObjects.begin(); it!=mObjects.end(); it++) {
-        if ((*it)->mBuffer) {
-            mDeviceFunctions->vkDestroyBuffer(dev, (*it)->mBuffer, nullptr);
-            (*it)->mBuffer = VK_NULL_HANDLE;
+        if ((*it)->getBuffer()) {
+            mDeviceFunctions->vkDestroyBuffer(dev, (*it)->getBuffer(), nullptr);
+            (*it)->getBuffer() = VK_NULL_HANDLE;
         }
     }
     for (auto it=mObjects.begin(); it!=mObjects.end(); it++) {
-        if ((*it)->mBufferMemory) {
-            mDeviceFunctions->vkFreeMemory(dev, (*it)->mBufferMemory, nullptr);
-            (*it)->mBuffer = VK_NULL_HANDLE;
+        if ((*it)->getBufferMemory()) {
+            mDeviceFunctions->vkFreeMemory(dev, (*it)->getBufferMemory(), nullptr);
+            (*it)->getBuffer() = VK_NULL_HANDLE;
         }
     }
 }
