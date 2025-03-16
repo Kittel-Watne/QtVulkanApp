@@ -610,11 +610,21 @@ void Renderer::releaseResources()
 			BufferHandle handle { (*it)->getVBufferMemory(), (*it)->getVBuffer() };
 			DestroyBuffer(handle);
             (*it)->getVBuffer() = VK_NULL_HANDLE;
+            (*it)->getVBufferMemory() = VK_NULL_HANDLE;
+
         }
+        if ((*it)->getIBuffer()) {
+            BufferHandle handle { (*it)->getVBufferMemory(), (*it)->getVBuffer() };
+            DestroyBuffer(handle);
+            (*it)->getIBuffer() = VK_NULL_HANDLE;
+            (*it)->getIBufferMemory() = VK_NULL_HANDLE;
+        }
+
     }
 }
 
 //Helper function to find the memory type - Qt has this built in, but it is hidden
+//This is the explicit version
 uint32_t Renderer::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags requiredProperties)
 {
     VkPhysicalDeviceMemoryProperties memoryProperties;
@@ -643,7 +653,6 @@ uint32_t Renderer::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags req
 
     return 0;
 }
-
 
 // Function to create a command buffer that is short lived and not a part of the Rendering command
 VkCommandBuffer Renderer::BeginTransientCommandBuffer()

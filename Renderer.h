@@ -57,9 +57,6 @@ protected:
     //Vulkan resources:
     QVulkanWindow* mWindow{ nullptr };
     QVulkanDeviceFunctions* mDeviceFunctions{ nullptr };
-
-    VkDeviceMemory mBufferMemory{ VK_NULL_HANDLE };
-    VkBuffer mBuffer{ VK_NULL_HANDLE };
  
     VkPipelineCache mPipelineCache{ VK_NULL_HANDLE };
     VkPipelineLayout mPipelineLayout{ VK_NULL_HANDLE };
