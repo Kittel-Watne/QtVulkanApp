@@ -3,6 +3,7 @@
 #include <QFile>
 #include "VulkanWindow.h"
 #include "WorldAxis.h"
+#include "ObjMesh.h"
 
 /*** Renderer class ***/
 Renderer::Renderer(QVulkanWindow *w, bool msaa)
@@ -19,19 +20,20 @@ Renderer::Renderer(QVulkanWindow *w, bool msaa)
             }
         }
     }
-    // Dag 230125
+
     mObjects.push_back(new Triangle());
     mObjects.push_back((new TriangleSurface()));
     mObjects.push_back((new WorldAxis()));
-    // Dag 030225
+    mObjects.push_back((new ObjMesh("suzanne.obj")));
+
     mObjects.at(0)->setName("tri");
     mObjects.at(1)->setName("quad");
     mObjects.at(2)->setName("axis");
+	mObjects.at(3)->setName("suzanne");
 
     // **************************************
-    // Legger inn objekter i map
+    // Objects in optional map
     // **************************************
-    //std::string navn{"navn"}; // Skal VisualObject klassen få en navn-variabel?
     for (auto it=mObjects.begin(); it!=mObjects.end(); it++)
         mMap.insert(std::pair<std::string, VisualObject*>{(*it)->getName(),*it});
 
