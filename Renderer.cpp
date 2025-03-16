@@ -1,7 +1,6 @@
 #include "Renderer.h"
 #include <QVulkanFunctions>
 #include <QFile>
-#include "UniformTransformations.h"
 #include "VulkanWindow.h"
 #include "WorldAxis.h"
 
@@ -43,6 +42,7 @@ Renderer::Renderer(QVulkanWindow *w, bool msaa)
     mVulkanWindow = dynamic_cast<VulkanWindow*>(w);
 }
 
+//Automatically called by Qt on Renderer startup
 void Renderer::initResources()
 {
     qDebug("\n ***************************** initResources ******************************************* \n");
@@ -54,7 +54,7 @@ void Renderer::initResources()
     uint32_t graphicsQueueFamilyIndex = mWindow->graphicsQueueFamilyIndex();
     mDeviceFunctions->vkGetDeviceQueue(logicalDevice, graphicsQueueFamilyIndex, 0, &mGraphicsQueue);
 
-    const int concurrentFrameCount = mWindow->concurrentFrameCount(); // 2 on Oles Machine
+    // const int concurrentFrameCount = mWindow->concurrentFrameCount(); // 2 on Oles Machine
     const VkPhysicalDeviceLimits *pdevLimits = &mWindow->physicalDeviceProperties()->limits;
     const VkDeviceSize uniAlign = pdevLimits->minUniformBufferOffsetAlignment;
     qDebug("Uniform buffer offset alignment is %u", (uint)uniAlign); //64 on Oles machine
@@ -97,7 +97,7 @@ void Renderer::initResources()
     vertexInputInfo.flags = 0;
     vertexInputInfo.vertexBindingDescriptionCount = 1;
     vertexInputInfo.pVertexBindingDescriptions = &vertexBindingDesc;
-    vertexInputInfo.vertexAttributeDescriptionCount = 2; // position and color - sizeof(vertexAttrDesc ....)
+    vertexInputInfo.vertexAttributeDescriptionCount = 2; // position and color - sizeof(vertexAttrDesc) / sizeof(vertexAttrDesc[0]);
     vertexInputInfo.pVertexAttributeDescriptions = vertexAttrDesc;
     /*******************************************************/
 
@@ -236,6 +236,11 @@ void Renderer::initResources()
     if (fragShaderModule)
         mDeviceFunctions->vkDestroyShaderModule(logicalDevice, fragShaderModule, nullptr);
 
+	// Create the uniform buffer
+	createUniformBuffer();
+    createDescriptorPool();
+    createDescriptorSet();
+
     getVulkanHWInfo(); // if you want to get info about the Vulkan hardware
 }
 
@@ -247,10 +252,14 @@ void Renderer::initSwapChainResources()
     // Projection matrix - how the scene will be projected into the render window
 	// has to be updated when the window is resized
     mProjectionMatrix.setToIdentity();
+
+    //can be used to correct for coordinate system differences between OpenGL and Vulkan:
+    //QMatrix4x4 QVulkanWindow::clipCorrectionMatrix()
+
     //find the size of the window
     const QSize sz = mWindow->swapChainImageSize();
 
-    mCamera.perspective(45.0f, sz.width() / (float) sz.height(), 0.01f, 100.0f);
+    mCamera.perspective(45.0f, sz.width() / (float) sz.height(), 0.01f, 500.0f);
 }
 
 void Renderer::startNextFrame()
@@ -266,6 +275,11 @@ void Renderer::startNextFrame()
 
     VkDeviceSize vbOffset{ 0 };     //Offsets into buffer being bound
 
+    mDeviceFunctions->vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineLayout, 0, 1, 
+        mDescriptorSet, 0, nullptr);
+
+    setViewProjectionMatrix(mCamera);   //Update the view and projection matrix
+
     /********************************* Our draw call!: *********************************/
     for (std::vector<VisualObject*>::iterator it=mObjects.begin(); it!=mObjects.end(); it++)
     {
@@ -275,7 +289,8 @@ void Renderer::startNextFrame()
 		else
 			mDeviceFunctions->vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline2);
 
-        setModelMatrix(mCamera.cMatrix() * (*it)->getMatrix());
+        QMatrix4x4 mvp = mCamera.projectionMatrix() * mCamera.viewMatrix() * (*it)->getMatrix();
+        setModelMatrix(mvp);//(*it)->getMatrix()); //mvp);             //
         mDeviceFunctions->vkCmdBindVertexBuffers(commandBuffer, 0, 1, &(*it)->getVBuffer(), &vbOffset);
 		//Check if we have an index buffer - if so, use Indexed draw
         if ((*it)->getIndices().size() > 0)
@@ -290,6 +305,7 @@ void Renderer::startNextFrame()
 
     mDeviceFunctions->vkCmdEndRenderPass(commandBuffer);
 
+    //Hardcoded!!!
     mObjects.at(1)->rotate(1.0f, 0.0f, 0.0f, 1.0f);
     
     mWindow->frameReady();
@@ -327,6 +343,16 @@ void Renderer::setModelMatrix(QMatrix4x4 modelMatrix)
 {
 	mDeviceFunctions->vkCmdPushConstants(mWindow->currentCommandBuffer(), mPipelineLayout, 
 		VK_SHADER_STAGE_VERTEX_BIT, 0, 16 * sizeof(float), modelMatrix.constData());    //Column-major matrix
+}
+
+void Renderer::setViewProjectionMatrix(Camera camera)
+{
+    UniformTransformations transforms{};
+    // The stupid QMatrix4x4 is larger than 64 bytes, so have to manually copy the content of the actual 4x4 matrix
+    // to keep it aligned
+    camera.viewMatrix().copyDataTo(transforms.mView);
+    camera.projectionMatrix().copyDataTo(transforms.mProjection);
+    memcpy(mUniformBufferLocation, &transforms, sizeof(UniformTransformations));
 }
 
 void Renderer::setRenderPassParameters(VkCommandBuffer commandBuffer)
@@ -374,7 +400,7 @@ void Renderer::createDescriptorSetLayouts()
     uniformLayoutBinding.binding = 0;
     uniformLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     uniformLayoutBinding.descriptorCount = 1;
-    uniformLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	uniformLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;   //We are using the uniform buffer in the vertex shader
 
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -389,9 +415,60 @@ void Renderer::createDescriptorSetLayouts()
 void Renderer::createUniformBuffer()
 {
     VkDeviceSize bufferSize = sizeof(UniformTransformations);
+
+	mUniformBuffer = createGeneralBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+	//Map the buffer memory and copy the data to the buffer
+    VkResult err = mDeviceFunctions->vkMapMemory(mWindow->device(), mUniformBuffer.mBufferMemory, 0, bufferSize, 0, &mUniformBufferLocation);
+    if (err != VK_SUCCESS)
+        qFatal("Failed to map memory: %d", err);
 }
 
+void Renderer::createDescriptorSet()
+{
+	VkDescriptorSetAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.descriptorPool = mDescriptorPool;
+	allocInfo.descriptorSetCount = 1;
+	allocInfo.pSetLayouts = &mDescriptorSetLayout;
 
+	VkResult err = mDeviceFunctions->vkAllocateDescriptorSets(mWindow->device(), &allocInfo, mDescriptorSet);
+	if (err != VK_SUCCESS)
+		qFatal("Failed to allocate descriptor set: %d", err);
+
+	VkDescriptorBufferInfo bufferInfo{};
+	bufferInfo.buffer = mUniformBuffer.mBuffer;
+	bufferInfo.offset = 0;
+	bufferInfo.range = sizeof(UniformTransformations);
+
+	VkWriteDescriptorSet descriptorWrite{};
+	descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrite.dstSet = mDescriptorSet[0];
+	descriptorWrite.dstBinding = 0;
+	descriptorWrite.dstArrayElement = 0;
+	descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	descriptorWrite.descriptorCount = 1;
+	descriptorWrite.pBufferInfo = &bufferInfo;
+
+	mDeviceFunctions->vkUpdateDescriptorSets(mWindow->device(), 1, &descriptorWrite, 0, nullptr);
+}
+
+void Renderer::createDescriptorPool()
+{
+    VkDescriptorPoolSize poolSize{};
+    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;  //VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC
+    poolSize.descriptorCount = 1;
+
+	VkDescriptorPoolCreateInfo poolInfo{};
+	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.maxSets = 1;
+	poolInfo.poolSizeCount = 1;
+    poolInfo.pPoolSizes = &poolSize;
+
+	VkResult err = mDeviceFunctions->vkCreateDescriptorPool(mWindow->device(), &poolInfo, nullptr, &mDescriptorPool);
+	if (err != VK_SUCCESS)
+		qFatal("Failed to create descriptor pool: %d", err);
+}
 
 // Dag 240125
 // This function contains some of the body of our former Renderer::initResources() function
@@ -473,7 +550,7 @@ void Renderer::createVertexBuffer(const VkDeviceSize uniformAlignment, VisualObj
 	EndTransientCommandBuffer(commandBuffer);
 	
     //Free the staging buffer
-	DestroyBuffer(stagingHandle);
+	destroyBuffer(stagingHandle);
 }
 
 void Renderer::createIndexBuffer(const VkDeviceSize uniformAlignment, VisualObject* visualObject)
@@ -509,7 +586,7 @@ void Renderer::createIndexBuffer(const VkDeviceSize uniformAlignment, VisualObje
 	EndTransientCommandBuffer(commandBuffer);
 
 	//Free the staging buffer
-	DestroyBuffer(stagingHandle);
+	destroyBuffer(stagingHandle);
 }
 
 BufferHandle Renderer::createGeneralBuffer(const VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
@@ -605,8 +682,23 @@ void Renderer::getVulkanHWInfo()
 void Renderer::releaseSwapChainResources()
 {
     qDebug("\n ***************************** releaseSwapChainResources ******************************************* \n");
+    /* from VulkanCubes
+     * QFutureWatcher<void> mFrameWatcher;
+     *     bool mFramePending{false};
+    // It is important to finish the pending frame right here since this is the
+    // last opportunity to act with all resources intact.
+    mFrameWatcher.waitForFinished();
+    // Cannot count on the finished() signal being emitted before returning
+    // from here.
+    if (mFramePending) {
+        mFramePending = false;
+        mWindow->frameReady();
+    }
+    */
 }
 
+// Function called by Qt when the application typically when app is closing
+// It automatically waits for the GPU to be idle before releasing resources
 void Renderer::releaseResources()
 {
     qDebug("\n ***************************** releaseResources ******************************************* \n");
@@ -633,6 +725,8 @@ void Renderer::releaseResources()
         mPipelineCache = VK_NULL_HANDLE;
     }
 
+	destroyBuffer(mUniformBuffer);
+
     if (mDescriptorSetLayout) {
         mDeviceFunctions->vkDestroyDescriptorSetLayout(dev, mDescriptorSetLayout, nullptr);
         mDescriptorSetLayout = VK_NULL_HANDLE;
@@ -647,7 +741,7 @@ void Renderer::releaseResources()
     for (auto it=mObjects.begin(); it!=mObjects.end(); it++) {
         if ((*it)->getVBuffer()) {
 			BufferHandle handle { (*it)->getVBufferMemory(), (*it)->getVBuffer() };
-			DestroyBuffer(handle);
+			destroyBuffer(handle);
             (*it)->getVBuffer() = VK_NULL_HANDLE;
         }
     }
@@ -722,7 +816,7 @@ void Renderer::EndTransientCommandBuffer(VkCommandBuffer commandBuffer)
 }
 
 // Function to destroy a buffer and its memory
-void Renderer::DestroyBuffer(BufferHandle handle) {
+void Renderer::destroyBuffer(BufferHandle handle) {
     mDeviceFunctions->vkDeviceWaitIdle(mWindow->device());
     mDeviceFunctions->vkDestroyBuffer(mWindow->device(), handle.mBuffer, nullptr);
     mDeviceFunctions->vkFreeMemory(mWindow->device(), handle.mBufferMemory, nullptr);

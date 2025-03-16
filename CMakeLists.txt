@@ -18,7 +18,6 @@ qt_add_executable(QtVulkanApp
     Triangle.h Triangle.cpp
     Input.h
     WorldAxis.h WorldAxis.cpp
-    UniformTransformations.h UniformTransformations.cpp
     Utilities.h
 )
 # Define the shader files

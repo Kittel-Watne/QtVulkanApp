@@ -2,6 +2,7 @@
 #define UTILITIES_H
 
 #include <QVulkanFunctions>
+#include <QMatrix4x4>
 
 //Utility function for alignment:
 static inline VkDeviceSize aligned(VkDeviceSize v, VkDeviceSize byteAlign)
@@ -14,6 +15,13 @@ struct BufferHandle
 {
     VkDeviceMemory mBufferMemory{ VK_NULL_HANDLE };
     VkBuffer mBuffer{ VK_NULL_HANDLE };
+};
+
+//Utility struct for handling uniform transformations
+struct UniformTransformations
+{
+    float mView[16]{};
+    float mProjection[16]{};
 };
 
 #endif // UTILITIES_H

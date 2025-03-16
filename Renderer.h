@@ -46,6 +46,7 @@ protected:
     VkShaderModule createShader(const QString &name);
 
 	void setModelMatrix(QMatrix4x4 modelMatrix);
+	void setViewProjectionMatrix(Camera camera);
 
 	void setRenderPassParameters(VkCommandBuffer commandBuffer);
 
@@ -88,7 +89,9 @@ private:
 	void createIndexBuffer(const VkDeviceSize uniformAlignment, VisualObject* visualObject);
     void createDescriptorSetLayouts();
     void createUniformBuffer();
-    void DestroyBuffer(BufferHandle handle);
+	void createDescriptorSet();
+	void createDescriptorPool();
+    void destroyBuffer(BufferHandle handle);
 
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags requiredProperties);
 
@@ -100,6 +103,8 @@ private:
 	VkCommandBuffer BeginTransientCommandBuffer();
 	void EndTransientCommandBuffer(VkCommandBuffer commandBuffer);
 
+    BufferHandle mUniformBuffer{};
+	void* mUniformBufferLocation{ nullptr };
 };
 
 #endif // RENDERER_H
