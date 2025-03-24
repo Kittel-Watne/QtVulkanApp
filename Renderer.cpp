@@ -276,7 +276,7 @@ void Renderer::startNextFrame()
     VkDeviceSize vbOffset{ 0 };     //Offsets into buffer being bound
 
     mDeviceFunctions->vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineLayout, 0, 1, 
-        mDescriptorSet, 0, nullptr);
+        &mDescriptorSet, 0, nullptr);
 
     setViewProjectionMatrix(mCamera);   //Update the view and projection matrix
 
@@ -431,7 +431,7 @@ void Renderer::createDescriptorSet()
 	allocInfo.descriptorSetCount = 1;
 	allocInfo.pSetLayouts = &mDescriptorSetLayout;
 
-	VkResult err = mDeviceFunctions->vkAllocateDescriptorSets(mWindow->device(), &allocInfo, mDescriptorSet);
+	VkResult err = mDeviceFunctions->vkAllocateDescriptorSets(mWindow->device(), &allocInfo, &mDescriptorSet);
 	if (err != VK_SUCCESS)
 		qFatal("Failed to allocate descriptor set: %d", err);
 
@@ -442,7 +442,7 @@ void Renderer::createDescriptorSet()
 
 	VkWriteDescriptorSet descriptorWrite{};
 	descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrite.dstSet = mDescriptorSet[0];
+    descriptorWrite.dstSet = mDescriptorSet;        //[0];
 	descriptorWrite.dstBinding = 0;
 	descriptorWrite.dstArrayElement = 0;
 	descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;

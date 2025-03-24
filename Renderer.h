@@ -64,7 +64,8 @@ protected:
  
     VkDescriptorPool mDescriptorPool{ VK_NULL_HANDLE };
     VkDescriptorSetLayout mDescriptorSetLayout{ VK_NULL_HANDLE };
-    VkDescriptorSet mDescriptorSet[QVulkanWindow::MAX_CONCURRENT_FRAME_COUNT]{ VK_NULL_HANDLE };
+	//Only need one descriptor set for now:
+    VkDescriptorSet mDescriptorSet{ VK_NULL_HANDLE }; // [QVulkanWindow::MAX_CONCURRENT_FRAME_COUNT] { VK_NULL_HANDLE };
 
     VkPipelineCache mPipelineCache{ VK_NULL_HANDLE };
     VkPipelineLayout mPipelineLayout{ VK_NULL_HANDLE };
