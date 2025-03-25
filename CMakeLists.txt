@@ -80,12 +80,15 @@ install(SCRIPT ${deploy_script})
 add_custom_target(
     PreBuildCommandF ALL
     COMMAND glslc color.frag -o color_frag.spv
+#   This version includes the debug info in the compiled shader - good for RenderDoc
+#   COMMAND glslangValidator -g -V -o color_frag.spv color.frag
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Compiling fragment shader"
 )
 add_custom_target(
     PreBuildCommandV ALL
     COMMAND glslc color.vert -o color_vert.spv
+#   COMMAND glslangValidator -g -V -o color_vert.spv color.vert
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Compiling vertex shader"
 )

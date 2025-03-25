@@ -46,7 +46,7 @@ protected:
     VkShaderModule createShader(const QString &name);
 
 	void setModelMatrix(QMatrix4x4 modelMatrix);
-	void setViewProjectionMatrix(Camera camera);
+    void setViewProjectionMatrix();
 
 	void setRenderPassParameters(VkCommandBuffer commandBuffer);
 

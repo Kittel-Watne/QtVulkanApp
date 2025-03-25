@@ -36,7 +36,7 @@ Renderer::Renderer(QVulkanWindow *w, bool msaa)
         mMap.insert(std::pair<std::string, VisualObject*>{(*it)->getName(),*it});
 
 	//Inital position of the camera
-    mCamera.setPosition(QVector3D(-1, -1, -4));
+    mCamera.setPosition(QVector3D(-0.5, -0.5, -8));
 
     //Need access to our VulkanWindow so making a convenience pointer
     mVulkanWindow = dynamic_cast<VulkanWindow*>(w);
@@ -251,7 +251,7 @@ void Renderer::initSwapChainResources()
 
     // Projection matrix - how the scene will be projected into the render window
 	// has to be updated when the window is resized
-    mProjectionMatrix.setToIdentity();
+    // mProjectionMatrix.setToIdentity();
 
     //can be used to correct for coordinate system differences between OpenGL and Vulkan:
     //QMatrix4x4 QVulkanWindow::clipCorrectionMatrix()
@@ -278,7 +278,7 @@ void Renderer::startNextFrame()
     mDeviceFunctions->vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineLayout, 0, 1, 
         &mDescriptorSet, 0, nullptr);
 
-    setViewProjectionMatrix(mCamera);   //Update the view and projection matrix
+    setViewProjectionMatrix();   //Update the view and projection matrix
 
     /********************************* Our draw call!: *********************************/
     for (std::vector<VisualObject*>::iterator it=mObjects.begin(); it!=mObjects.end(); it++)
@@ -290,7 +290,7 @@ void Renderer::startNextFrame()
 			mDeviceFunctions->vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline2);
 
         QMatrix4x4 mvp = mCamera.projectionMatrix() * mCamera.viewMatrix() * (*it)->getMatrix();
-        setModelMatrix(mvp);//(*it)->getMatrix()); //mvp);             //
+        setModelMatrix((*it)->getMatrix()); //mvp);             //
         mDeviceFunctions->vkCmdBindVertexBuffers(commandBuffer, 0, 1, &(*it)->getVBuffer(), &vbOffset);
 		//Check if we have an index buffer - if so, use Indexed draw
         if ((*it)->getIndices().size() > 0)
@@ -344,14 +344,22 @@ void Renderer::setModelMatrix(QMatrix4x4 modelMatrix)
 		VK_SHADER_STAGE_VERTEX_BIT, 0, 16 * sizeof(float), modelMatrix.constData());    //Column-major matrix
 }
 
-void Renderer::setViewProjectionMatrix(Camera camera)
+void Renderer::setViewProjectionMatrix()
 {
-    UniformTransformations transforms{};
-    // The stupid QMatrix4x4 is larger than 64 bytes, so have to manually copy the content of the actual 4x4 matrix
-    // to keep it aligned
-    camera.viewMatrix().copyDataTo(transforms.mView);
-    camera.projectionMatrix().copyDataTo(transforms.mProjection);
-    memcpy(mUniformBufferLocation, &transforms, sizeof(UniformTransformations));
+    memcpy(mUniformBufferLocation, mCamera.viewMatrix().constData(), 64);
+    QMatrix4x4 temp = mCamera.projectionMatrix();
+    temp = temp * mWindow->clipCorrectionMatrix();
+	//Adding 64 bytes to the uniform buffer location to get to the projection matrix position
+    memcpy(static_cast<char*>(mUniformBufferLocation) + 64, temp.constData(), 64);
+
+    //From Qt Hello Cube example
+    // Vertex shader uniforms
+    //memcpy(p, vp.constData(), 64);
+    //memcpy(p + 64, model.constData(), 64);
+    //const float* mnp = modelNormal.constData();
+    //memcpy(p + 128, mnp, 12);
+    //memcpy(p + 128 + 16, mnp + 3, 12);
+    //memcpy(p + 128 + 32, mnp + 6, 12);
 }
 
 void Renderer::setRenderPassParameters(VkCommandBuffer commandBuffer)
@@ -391,82 +399,6 @@ void Renderer::setRenderPassParameters(VkCommandBuffer commandBuffer)
     scissor.extent.width = viewport.width;
     scissor.extent.height = viewport.height;
     mDeviceFunctions->vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-}
-
-void Renderer::createDescriptorSetLayouts()
-{
-    VkDescriptorSetLayoutBinding uniformLayoutBinding{};
-    uniformLayoutBinding.binding = 0;
-    uniformLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    uniformLayoutBinding.descriptorCount = 1;
-	uniformLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;   //We are using the uniform buffer in the vertex shader
-
-    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = 1;
-    layoutInfo.pBindings = &uniformLayoutBinding;
-
-    VkResult err = mDeviceFunctions->vkCreateDescriptorSetLayout(mWindow->device(), &layoutInfo, nullptr, &mDescriptorSetLayout);
-    if (err != VK_SUCCESS)
-        qFatal("Failed to create DescriptorSetLayout: %d", err);
-}
-
-void Renderer::createUniformBuffer()
-{
-    VkDeviceSize bufferSize = sizeof(UniformTransformations);
-
-	mUniformBuffer = createGeneralBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-	//Map the buffer memory and copy the data to the buffer
-    VkResult err = mDeviceFunctions->vkMapMemory(mWindow->device(), mUniformBuffer.mBufferMemory, 0, bufferSize, 0, &mUniformBufferLocation);
-    if (err != VK_SUCCESS)
-        qFatal("Failed to map memory: %d", err);
-}
-
-void Renderer::createDescriptorSet()
-{
-	VkDescriptorSetAllocateInfo allocInfo{};
-	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocInfo.descriptorPool = mDescriptorPool;
-	allocInfo.descriptorSetCount = 1;
-	allocInfo.pSetLayouts = &mDescriptorSetLayout;
-
-	VkResult err = mDeviceFunctions->vkAllocateDescriptorSets(mWindow->device(), &allocInfo, &mDescriptorSet);
-	if (err != VK_SUCCESS)
-		qFatal("Failed to allocate descriptor set: %d", err);
-
-	VkDescriptorBufferInfo bufferInfo{};
-	bufferInfo.buffer = mUniformBuffer.mBuffer;
-	bufferInfo.offset = 0;
-	bufferInfo.range = sizeof(UniformTransformations);
-
-	VkWriteDescriptorSet descriptorWrite{};
-	descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite.dstSet = mDescriptorSet;        //[0];
-	descriptorWrite.dstBinding = 0;
-	descriptorWrite.dstArrayElement = 0;
-	descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	descriptorWrite.descriptorCount = 1;
-	descriptorWrite.pBufferInfo = &bufferInfo;
-
-	mDeviceFunctions->vkUpdateDescriptorSets(mWindow->device(), 1, &descriptorWrite, 0, nullptr);
-}
-
-void Renderer::createDescriptorPool()
-{
-    VkDescriptorPoolSize poolSize{};
-    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;  //VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC
-    poolSize.descriptorCount = 1;
-
-	VkDescriptorPoolCreateInfo poolInfo{};
-	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.maxSets = 1;
-	poolInfo.poolSizeCount = 1;
-    poolInfo.pPoolSizes = &poolSize;
-
-	VkResult err = mDeviceFunctions->vkCreateDescriptorPool(mWindow->device(), &poolInfo, nullptr, &mDescriptorPool);
-	if (err != VK_SUCCESS)
-		qFatal("Failed to create descriptor pool: %d", err);
 }
 
 // Dag 240125
@@ -515,6 +447,7 @@ void Renderer::createBuffer(VkDevice logicalDevice, const VkDeviceSize uniformAl
 
     mDeviceFunctions->vkUnmapMemory(logicalDevice, visualObject->getVBufferMemory());
 }
+
 //Very similar to createBuffer, but here we find and set the memory type explicitly
 //Also the generation of the buffer is in a separate function
 //and copy data to GPU read only memory
@@ -526,6 +459,7 @@ void Renderer::createVertexBuffer(const VkDeviceSize uniformAlignment, VisualObj
 	BufferHandle stagingHandle = createGeneralBuffer(vertexAllocSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, //Transfer source bit is for copying data to the GPU
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);    // Host visible memory (CPU) is slower to access than device local memory (GPU)
 
+    //Copy the data over to the buffer
     void* data{ nullptr };
     mDeviceFunctions->vkMapMemory(mWindow->device(), stagingHandle.mBufferMemory, 0, vertexAllocSize, 0, &data);
     memcpy(data, visualObject->getVertices().data(), vertexAllocSize);
@@ -625,6 +559,90 @@ BufferHandle Renderer::createGeneralBuffer(const VkDeviceSize size, VkBufferUsag
 
     return bufferHandle;
 }
+
+//Create a descriptor set layout that describes the uniform buffer.
+void Renderer::createDescriptorSetLayouts()
+{
+    VkDescriptorSetLayoutBinding uniformLayoutBinding{};
+    uniformLayoutBinding.binding = 0;
+    uniformLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    uniformLayoutBinding.descriptorCount = 1;
+    uniformLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;   //We are using the uniform buffer in the vertex shader
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = 1;
+    layoutInfo.pBindings = &uniformLayoutBinding;
+
+    VkResult err = mDeviceFunctions->vkCreateDescriptorSetLayout(mWindow->device(), &layoutInfo, nullptr, &mDescriptorSetLayout);
+    if (err != VK_SUCCESS)
+        qFatal("Failed to create DescriptorSetLayout: %d", err);
+}
+
+void Renderer::createUniformBuffer()
+{
+    VkDeviceSize bufferSize = sizeof(UniformTransformations);
+
+    mUniformBuffer = createGeneralBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    //Map the buffer memory
+    VkResult err = mDeviceFunctions->vkMapMemory(mWindow->device(), mUniformBuffer.mBufferMemory, 0, bufferSize, 0, &mUniformBufferLocation);
+    if (err != VK_SUCCESS)
+        qFatal("Failed to map memory: %d", err);
+}
+
+//Allocate a descriptor set and update it to point to the uniform buffer
+void Renderer::createDescriptorSet()
+{
+    VkDescriptorSetAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = mDescriptorPool;
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts = &mDescriptorSetLayout;
+
+    VkResult err = mDeviceFunctions->vkAllocateDescriptorSets(mWindow->device(), &allocInfo, &mDescriptorSet);
+    if (err != VK_SUCCESS)
+        qFatal("Failed to allocate descriptor set: %d", err);
+
+    VkDescriptorBufferInfo bufferInfo{};
+    bufferInfo.buffer = mUniformBuffer.mBuffer;
+    bufferInfo.offset = 0;
+    bufferInfo.range = sizeof(UniformTransformations);
+
+    VkWriteDescriptorSet descriptorWrite{};
+    descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrite.dstSet = mDescriptorSet;        //[0];
+    descriptorWrite.dstBinding = 0;
+    descriptorWrite.dstArrayElement = 0;
+    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptorWrite.descriptorCount = 1;
+    descriptorWrite.pBufferInfo = &bufferInfo;
+
+    mDeviceFunctions->vkUpdateDescriptorSets(mWindow->device(), 1, &descriptorWrite, 0, nullptr);
+}
+
+//Create a descriptor pool to allocate descriptor sets.
+void Renderer::createDescriptorPool()
+{
+    VkDescriptorPoolSize poolSize{};
+    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;  //VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC
+    poolSize.descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.maxSets = 1;
+    poolInfo.poolSizeCount = 1;
+    poolInfo.pPoolSizes = &poolSize;
+
+    VkResult err = mDeviceFunctions->vkCreateDescriptorPool(mWindow->device(), &poolInfo, nullptr, &mDescriptorPool);
+    if (err != VK_SUCCESS)
+        qFatal("Failed to create descriptor pool: %d", err);
+}
+
+
+
+/*************************************************************************************************/
 
 void Renderer::getVulkanHWInfo()
 {
