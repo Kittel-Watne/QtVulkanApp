@@ -278,7 +278,7 @@ void Renderer::startNextFrame()
     mDeviceFunctions->vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineLayout, 0, 1, 
         &mDescriptorSet, 0, nullptr);
 
-    setViewProjectionMatrix();   //Update the view and projection matrix
+    setViewProjectionMatrix();   //Update the view and projection matrix in the Uniform
 
     /********************************* Our draw call!: *********************************/
     for (std::vector<VisualObject*>::iterator it=mObjects.begin(); it!=mObjects.end(); it++)
@@ -348,9 +348,22 @@ void Renderer::setViewProjectionMatrix()
 {
     memcpy(mUniformBufferLocation, mCamera.viewMatrix().constData(), 64);
     QMatrix4x4 temp = mCamera.projectionMatrix();
-    temp = temp * mWindow->clipCorrectionMatrix();
+    temp = temp * mWindow->clipCorrectionMatrix();  //Correcting for Vulkans -Y
 	//Adding 64 bytes to the uniform buffer location to get to the projection matrix position
     memcpy(static_cast<char*>(mUniformBufferLocation) + 64, temp.constData(), 64);
+
+    //Just testing some more random data to send
+    //Vertex-shader is updatex accordingly
+    float color[3] = {0.8, 0.1, 0.9};
+    memcpy(static_cast<char*>(mUniformBufferLocation) + 128, color, 12);
+
+    /************ NB ************
+    Remember to go into
+      createUniformBuffer() - bufferSize
+    and
+      createDescriptorSet() - bufferInfo.range
+    and UPDATE THE SIZE of the buffer if you add more data!!!
+    */
 
     //From Qt Hello Cube example
     // Vertex shader uniforms
@@ -581,7 +594,7 @@ void Renderer::createDescriptorSetLayouts()
 
 void Renderer::createUniformBuffer()
 {
-    VkDeviceSize bufferSize = sizeof(UniformTransformations);
+    VkDeviceSize bufferSize = 64 + 64 + 12;      // two 4x4 matrices + 12 for color
 
     mUniformBuffer = createGeneralBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -608,7 +621,7 @@ void Renderer::createDescriptorSet()
     VkDescriptorBufferInfo bufferInfo{};
     bufferInfo.buffer = mUniformBuffer.mBuffer;
     bufferInfo.offset = 0;
-    bufferInfo.range = sizeof(UniformTransformations);
+    bufferInfo.range = 64 + 64 + 12;      // two 4x4 matrices + 12 for color
 
     VkWriteDescriptorSet descriptorWrite{};
     descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -639,8 +652,6 @@ void Renderer::createDescriptorPool()
     if (err != VK_SUCCESS)
         qFatal("Failed to create descriptor pool: %d", err);
 }
-
-
 
 /*************************************************************************************************/
 

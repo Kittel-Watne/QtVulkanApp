@@ -12,15 +12,14 @@ layout(push_constant) uniform mod {
 layout(set = 0, binding = 0) uniform cam {
     mat4 view;
     mat4 projection;
+    vec3 extracolor;
 } camera;
 
 out gl_PerVertex { vec4 gl_Position; };
 
 void main()
 {
-    v_color = color;
-    gl_Position =   camera.projection * camera.view * model.model * vec4(position, 1.0); //camera.projection *
-    //gl_Position =  camera.projection * model.model * vec4(position, 1.0);
-    //gl_Position =  camera.projection * vec4(position, 1.0); //model matrix in camera.view
-    //gl_Position =  model.model * vec4(position, 1.0);
+    v_color = camera.extracolor;
+    gl_Position =   camera.projection * camera.view * model.model * vec4(position, 1.0);
 }
+

@@ -17,11 +17,4 @@ struct BufferHandle
     VkBuffer mBuffer{ VK_NULL_HANDLE };
 };
 
-//Utility struct for handling uniform transformations
-struct UniformTransformations
-{
-    float mView[16]{};
-    float mProjection[16]{};
-};
-
 #endif // UTILITIES_H
