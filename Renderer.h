@@ -47,6 +47,7 @@ protected:
 
 	void setModelMatrix(QMatrix4x4 modelMatrix);
     void setViewProjectionMatrix();
+	void setTexture(TextureHandle& textureHandle, VkCommandBuffer commandBuffer);
 
 	void setRenderPassParameters(VkCommandBuffer commandBuffer);
 
@@ -62,11 +63,16 @@ protected:
     VkDeviceMemory mBufferMemory{ VK_NULL_HANDLE };
     VkBuffer mBuffer{ VK_NULL_HANDLE };
  
+    //For Uniform buffers
     VkDescriptorPool mDescriptorPool{ VK_NULL_HANDLE };
     VkDescriptorSetLayout mDescriptorSetLayout{ VK_NULL_HANDLE };
-	//Only need one descriptor set for now:
     VkDescriptorSet mDescriptorSet{ VK_NULL_HANDLE }; // [QVulkanWindow::MAX_CONCURRENT_FRAME_COUNT] { VK_NULL_HANDLE };
 
+    //For Textures
+    VkDescriptorPool mTextureDescriptorPool{ VK_NULL_HANDLE };
+    VkDescriptorSetLayout mTextureDescriptorSetLayout{ VK_NULL_HANDLE };
+	VkSampler mTextureSampler{ VK_NULL_HANDLE };
+ 
     VkPipelineCache mPipelineCache{ VK_NULL_HANDLE };
     VkPipelineLayout mPipelineLayout{ VK_NULL_HANDLE };
     VkPipeline mPipeline1{ VK_NULL_HANDLE };
@@ -76,8 +82,6 @@ protected:
 
 private:
     friend class VulkanWindow;
-    Triangle mTriangle;
-    TriangleSurface mSurface;
     std::vector<VisualObject*> mObjects;
     std::unordered_map<std::string, VisualObject*> mMap;    // alternativ container
 
@@ -88,11 +92,38 @@ private:
 	//Start of Uniforms and DescriptorSets
 	void createVertexBuffer(const VkDeviceSize uniformAlignment, VisualObject* visualObject);
 	void createIndexBuffer(const VkDeviceSize uniformAlignment, VisualObject* visualObject);
-    void createDescriptorSetLayouts();
     void createUniformBuffer();
+    void createDescriptorSetLayouts();
 	void createDescriptorSet();
-	void createDescriptorPool();
+	void createDescriptorPools();
     void destroyBuffer(BufferHandle handle);
+
+	void createTextureSampler();
+    TextureHandle createTexture(const char* filename);
+	TextureHandle createImage(TextureSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
+	void transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
+	void copyBufferToImage(VkBuffer buffer, VkImage image, TextureSize size);
+	VkImageView createImageView(VkImage image, VkFormat format);
+    void createImageViews();
+    void SetTexture(VkCommandBuffer commandBuffer, TextureHandle handle);
+
+	void destroyTexture(TextureHandle& textureHandle);
+
+    //Texture variables
+
+    VkSurfaceKHR mSurface = VK_NULL_HANDLE;
+    VkSwapchainKHR mSwapChain = VK_NULL_HANDLE;
+    VkSurfaceFormatKHR mSurfaceFormat;
+    VkPresentModeKHR mPresentMode;
+    VkExtent2D mExtent;
+
+    std::vector<VkImage> mSwapChainImages;
+    std::vector<VkImageView> mSwapChainImageViews;
+    std::vector<VkFramebuffer> mSwapChainFramebuffers;
+
+    TextureHandle mTextureHandle{};
+
+
 
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags requiredProperties);
 
@@ -101,8 +132,8 @@ private:
     Camera mCamera;
     class VulkanWindow* mVulkanWindow{ nullptr };
 
-	VkCommandBuffer BeginTransientCommandBuffer();
-	void EndTransientCommandBuffer(VkCommandBuffer commandBuffer);
+	VkCommandBuffer beginTransientCommandBuffer();
+	void endTransientCommandBuffer(VkCommandBuffer commandBuffer);
 
     BufferHandle mUniformBuffer{};
 	void* mUniformBufferLocation{ nullptr };

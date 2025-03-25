@@ -17,4 +17,18 @@ struct BufferHandle
     VkBuffer mBuffer{ VK_NULL_HANDLE };
 };
 
+struct TextureHandle
+{
+	VkDeviceMemory mTextureMemory{ VK_NULL_HANDLE };
+	VkImage mImage{ VK_NULL_HANDLE };
+	VkImageView mImageView{ VK_NULL_HANDLE };
+	VkDescriptorSet mTextureDescriptorSet{ VK_NULL_HANDLE };
+};
+
+struct TextureSize
+{
+	int width;
+	int height;
+};
+
 #endif // UTILITIES_H
