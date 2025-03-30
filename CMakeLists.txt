@@ -19,6 +19,7 @@ qt_add_executable(QtVulkanApp
     Input.h
     WorldAxis.h WorldAxis.cpp
     Utilities.h
+    Texture.cpp Texture.h
 )
 # Define the shader files
 set(SHADER_FILES
