@@ -82,8 +82,11 @@ protected:
 
 private:
     friend class VulkanWindow;
-    std::vector<VisualObject*> mObjects;
+	std::vector<VisualObject*> mObjects;    //All objects in the program  
     std::unordered_map<std::string, VisualObject*> mMap;    // alternativ container
+
+
+	std::vector<class Texture*> mTextures;  //All textures in the program
 
     void createBuffer(VkDevice logicalDevice,
                       const VkDeviceSize uniAlign, VisualObject* visualObject,
@@ -100,9 +103,9 @@ private:
 
 	void createTextureSampler();
     TextureHandle createTexture(const char* filename);
-	TextureHandle createImage(TextureSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
+	TextureHandle createImage(int width, int height, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkFormat format);
 	void transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
-	void copyBufferToImage(VkBuffer buffer, VkImage image, TextureSize size);
+	void copyBufferToImage(VkBuffer buffer, VkImage image, int width, int height);
 	VkImageView createImageView(VkImage image, VkFormat format);
     void createImageViews();
     void SetTexture(VkCommandBuffer commandBuffer, TextureHandle handle);
@@ -113,17 +116,15 @@ private:
 
     VkSurfaceKHR mSurface = VK_NULL_HANDLE;
     VkSwapchainKHR mSwapChain = VK_NULL_HANDLE;
-    VkSurfaceFormatKHR mSurfaceFormat;
-    VkPresentModeKHR mPresentMode;
-    VkExtent2D mExtent;
+    VkSurfaceFormatKHR mSurfaceFormat{};
+    VkPresentModeKHR mPresentMode{};
+    VkExtent2D mExtent{};
 
     std::vector<VkImage> mSwapChainImages;
     std::vector<VkImageView> mSwapChainImageViews;
     std::vector<VkFramebuffer> mSwapChainFramebuffers;
 
     TextureHandle mTextureHandle{};
-
-
 
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags requiredProperties);
 

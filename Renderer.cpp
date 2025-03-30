@@ -3,6 +3,7 @@
 #include <QFile>
 #include "VulkanWindow.h"
 #include "WorldAxis.h"
+#include "Texture.h"
 
 /*** Renderer class ***/
 Renderer::Renderer(QVulkanWindow *w, bool msaa)
@@ -250,7 +251,7 @@ void Renderer::initResources()
     // Create the texture sampler
     createTextureSampler();
 
-	mTextureHandle = createTexture("dummy");
+    mTextureHandle = createTexture("../../Assets/hundARed.bmp");
 
     getVulkanHWInfo(); // if you want to get info about the Vulkan hardware
 }
@@ -568,7 +569,7 @@ BufferHandle Renderer::createGeneralBuffer(const VkDeviceSize size, VkBufferUsag
         qFatal("Failed to create general buffer: %d", err);
     }
 
-    VkMemoryRequirements memoryRequirements;
+    VkMemoryRequirements memoryRequirements{};
     mDeviceFunctions->vkGetBufferMemoryRequirements(mWindow->device(), bufferHandle.mBuffer, &memoryRequirements);
 
     // Manually find a memory type
@@ -946,36 +947,32 @@ void Renderer::createTextureSampler()
 
 TextureHandle Renderer::createTexture(const char* filename)
 {
-	//Dummy texture 2x2 pixels, 4 bytes per pixel
-    TextureSize imageSize{ 2, 2 };
-	unsigned char pixels[16]; //uint8_t == unsigned char
-    for (int i = 0; i < 16; i++)
-        pixels[i] = 0;
-    //Set some colors
-    pixels[0] = 255;
-    pixels[5] = 255;
-    pixels[10] = 255;
-    pixels[12] = 255;
-    pixels[13] = 255;
+    Texture *texture = new Texture();
 
-	VkDeviceSize bufferSize = 16;  // 2 * 2 * 4 bytes
+    VkDeviceSize bufferSize = texture->textureSize();
 	BufferHandle stagingBuffer = createGeneralBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-	void* data;
-	mDeviceFunctions->vkMapMemory(mWindow->device(), stagingBuffer.mBufferMemory, 0, bufferSize, 0, &data);
-	memcpy(data, pixels, bufferSize);
-	mDeviceFunctions->vkUnmapMemory(mWindow->device(), stagingBuffer.mBufferMemory);
+	//Checking if the texture has an alpha channel
+    VkFormat format{};
+	if (texture->hasAlpha())
+		format = VK_FORMAT_R8G8B8A8_SRGB;
+	else
+		format = VK_FORMAT_R8G8B8_SRGB;
 
-                                            
-	TextureHandle textureHandle = createImage(imageSize, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    void* data{};
+	mDeviceFunctions->vkMapMemory(mWindow->device(), stagingBuffer.mBufferMemory, 0, bufferSize, 0, &data);
+    memcpy(data, texture->getBitmap(), bufferSize);       //texture->getPixels(), bufferSize);
+	mDeviceFunctions->vkUnmapMemory(mWindow->device(), stagingBuffer.mBufferMemory);
+                                         
+	TextureHandle textureHandle = createImage(texture->getWidth(), texture->getHeight(), VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, format);
 
     transitionImageLayout(textureHandle.mImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    copyBufferToImage(stagingBuffer.mBuffer, textureHandle.mImage, imageSize);
+    copyBufferToImage(stagingBuffer.mBuffer, textureHandle.mImage, texture->getWidth(), texture->getHeight());
     transitionImageLayout(textureHandle.mImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-    textureHandle.mImageView = createImageView(textureHandle.mImage, VK_FORMAT_R8G8B8A8_SRGB);
+	textureHandle.mImageView = createImageView(textureHandle.mImage, format);
 
     VkDescriptorSetAllocateInfo descriptorSetAllocateInfo{};
     descriptorSetAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -988,12 +985,12 @@ TextureHandle Renderer::createTexture(const char* filename)
         std::exit(EXIT_FAILURE);
     }
 
-    VkDescriptorImageInfo descriptorImageInfo = {};
+    VkDescriptorImageInfo descriptorImageInfo{};
     descriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     descriptorImageInfo.imageView = textureHandle.mImageView;
     descriptorImageInfo.sampler = mTextureSampler;
 
-    VkWriteDescriptorSet writeDescriptorSet = {};
+    VkWriteDescriptorSet writeDescriptorSet{};
     writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writeDescriptorSet.dstSet = textureHandle.mTextureDescriptorSet;
     writeDescriptorSet.dstBinding = 0;
@@ -1009,7 +1006,7 @@ TextureHandle Renderer::createTexture(const char* filename)
 	return textureHandle;
 }
 
-TextureHandle Renderer::createImage(TextureSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
+TextureHandle Renderer::createImage(int width, int height, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkFormat format)
 {
     TextureHandle textureHandle{};
 
@@ -1018,12 +1015,12 @@ TextureHandle Renderer::createImage(TextureSize size, VkBufferUsageFlags usage, 
     textureInfo.usage = usage;                                   // buffer usage type
     textureInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	textureInfo.imageType = VK_IMAGE_TYPE_2D;
-    textureInfo.extent.width = size.width;
-	textureInfo.extent.height = size.height;
+    textureInfo.extent.width = width;
+	textureInfo.extent.height = height;
 	textureInfo.extent.depth = 1;
 	textureInfo.mipLevels = 1;
 	textureInfo.arrayLayers = 1;
-	textureInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+	textureInfo.format = format;
 	textureInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 	textureInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	//textureInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -1037,7 +1034,7 @@ TextureHandle Renderer::createImage(TextureSize size, VkBufferUsageFlags usage, 
         qFatal("Failed to create image buffer: %d", err);
     }
 
-    VkMemoryRequirements memoryRequirements;
+    VkMemoryRequirements memoryRequirements{};
     mDeviceFunctions->vkGetImageMemoryRequirements(mWindow->device(), textureHandle.mImage, &memoryRequirements);
 
     // Manually find a memory type
@@ -1099,7 +1096,7 @@ void Renderer::transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkI
     endTransientCommandBuffer(commandBuffer);
 }
 
-void Renderer::copyBufferToImage(VkBuffer buffer, VkImage image, TextureSize size)
+void Renderer::copyBufferToImage(VkBuffer buffer, VkImage image, int width, int height)
 {
 	VkCommandBuffer commandBuffer = beginTransientCommandBuffer();
 
@@ -1112,7 +1109,7 @@ void Renderer::copyBufferToImage(VkBuffer buffer, VkImage image, TextureSize siz
 	region.imageSubresource.baseArrayLayer = 0;
 	region.imageSubresource.layerCount = 1;
     region.imageOffset = { 0, 0, 0 };
-    region.imageExtent = { static_cast<std::uint32_t>(size.width), static_cast<std::uint32_t>(size.height), 1 };
+    region.imageExtent = { static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height), 1 };
 
     mDeviceFunctions->vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 

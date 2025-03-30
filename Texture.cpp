@@ -14,9 +14,10 @@ Texture::Texture()
 Texture::Texture(const std::string& filename)
 {
     textureFilename = filename;
-    bool success = readBitmap(filename);       //reads the BMP into memory
-    if(success)
-        setTexture();               //set texture up for OpenGL
+    readBitmap(filename);       //reads the BMP into memory
+    //bool success = readBitmap(filename);       //reads the BMP into memory
+    //if(success)
+        //setTexture();               //set texture up for OpenGL
 }
 
 unsigned int Texture::id() const
@@ -117,21 +118,26 @@ void Texture::setTexture()
 void Texture::makeDummyTexture()
 {
     qDebug("Making dummy texture");
-    for (int i=0; i<16; i++)
+    for (int i = 0; i < 16; i++)
         pixels[i] = 0;
+    //Set some colors
     pixels[0] = 255;
-    pixels[4] = 255;
-    pixels[8] = 255;
-    pixels[9] = 255;
+    pixels[5] = 255;
     pixels[10] = 255;
+    pixels[12] = 255;
+    pixels[13] = 255;
 
-    //glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    mColumns = 2;
+	mRows = 2;
+    mBytesPrPixel = 4;
+    mAlphaUsed = true;
 
-    //glGenTextures(1, &mId);
-    //glBindTexture(GL_TEXTURE_2D, mId);
-    //qDebug("Texture id: " + std::to_string(mId));
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_RGB, GL_UNSIGNED_BYTE,
-    //             reinterpret_cast<const GLvoid*>(pixels));
+    // mBytesPrPixel = 3;
+    // mAlphaUsed = false;
+
+
+    mBitmap = new unsigned char[mColumns * mRows * mBytesPrPixel];
+    memcpy(mBitmap, pixels, mColumns * mRows * mBytesPrPixel);
+	//for (int i = 0; i < mColumns * mRows * mBytesPrPixel; i++)
+	//	mBitmap[i] = pixels[i];
 }
