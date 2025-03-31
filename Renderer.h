@@ -5,8 +5,6 @@
 #include <vector>
 #include <unordered_map>
 #include "Camera.h"
-#include "Triangle.h"
-#include "TriangleSurface.h"
 #include "VisualObject.h"
 #include "Utilities.h"
 
@@ -86,7 +84,7 @@ private:
     std::unordered_map<std::string, VisualObject*> mMap;    // alternativ container
 
 
-	std::vector<class Texture*> mTextures;  //All textures in the program
+    std::vector<class Texture*> mTextures;  //All textures in the program - not used now
 
     void createBuffer(VkDevice logicalDevice,
                       const VkDeviceSize uniAlign, VisualObject* visualObject,

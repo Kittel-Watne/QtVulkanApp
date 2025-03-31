@@ -5,6 +5,8 @@
 #include "VulkanWindow.h"
 #include "WorldAxis.h"
 #include "Texture.h"
+#include "Triangle.h"
+#include "TriangleSurface.h"
 #include "stb_image.h"
 
 /*** Renderer class ***/

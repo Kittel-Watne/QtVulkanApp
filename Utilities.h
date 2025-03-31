@@ -25,10 +25,4 @@ struct TextureHandle
 	VkDescriptorSet mTextureDescriptorSet{ VK_NULL_HANDLE };
 };
 
-//struct TextureSize
-//{
-//	int width;
-//	int height;
-//};
-
 #endif // UTILITIES_H
