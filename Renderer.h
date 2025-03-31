@@ -105,22 +105,12 @@ private:
 	void transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
 	void copyBufferToImage(VkBuffer buffer, VkImage image, int width, int height);
 	VkImageView createImageView(VkImage image, VkFormat format);
-    void createImageViews();
-    void SetTexture(VkCommandBuffer commandBuffer, TextureHandle handle);
 
 	void destroyTexture(TextureHandle& textureHandle);
 
     //Texture variables
 
-    VkSurfaceKHR mSurface = VK_NULL_HANDLE;
-    VkSwapchainKHR mSwapChain = VK_NULL_HANDLE;
     VkSurfaceFormatKHR mSurfaceFormat{};
-    VkPresentModeKHR mPresentMode{};
-    VkExtent2D mExtent{};
-
-    std::vector<VkImage> mSwapChainImages;
-    std::vector<VkImageView> mSwapChainImageViews;
-    std::vector<VkFramebuffer> mSwapChainFramebuffers;
 
     TextureHandle mTextureHandle{};
 

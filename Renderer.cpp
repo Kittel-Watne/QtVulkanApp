@@ -417,8 +417,7 @@ void Renderer::setViewProjectionMatrix()
 void Renderer::setTexture(TextureHandle& textureHandle, VkCommandBuffer commandBuffer)
 {
 	mDeviceFunctions->vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
-        mPipelineLayout, 1, 1, &textureHandle.mTextureDescriptorSet, 0, nullptr);
-	
+        mPipelineLayout, 1, 1, &textureHandle.mTextureDescriptorSet, 0, nullptr);	
 }
 
 void Renderer::setRenderPassParameters(VkCommandBuffer commandBuffer)
@@ -983,34 +982,50 @@ void Renderer::createTextureSampler()
 
 TextureHandle Renderer::createTexture(const char* filename)
 {
-    Texture *texture = new Texture();   //new Texture(filename);
+    int texWidth, texHeight, texChannels;
+    VkDeviceSize bufferSize{};
+    VkFormat format{ VK_FORMAT_R8G8B8A8_SRGB }; //could be VK_FORMAT_R8G8B8_SRGB
+	BufferHandle stagingBuffer{};
+    stbi_uc* pixelData{ nullptr };
 
 	//Open the file and read the data into the imageFileData vector
     std::ifstream file(filename, std::ios::binary);
-    const std::uint32_t size = std::filesystem::file_size(filename);
-    std::vector<std::uint8_t> imageFileData(size);
-    file.read(reinterpret_cast<char*>(imageFileData.data()), size);
 
-	//Use the stb_image library to load the image
-	int texWidth, texHeight, texChannels;
-    stbi_uc* pixelData = stbi_load_from_memory(imageFileData.data(), size, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+	//if the file is not open, we create a default texture
+    if (!file.is_open()) 
+    {
+        Texture* texture = new Texture();   //new Texture(filename);
+        bufferSize = texture->textureSize(); 
+        texChannels = texture->bytesPrPixel(); 
+        texWidth = texture->width(); 
+        texHeight = texture->height();
+        stagingBuffer = createGeneralBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-    // VkDeviceSize bufferSize = texture->textureSize(); texChannels = texture->bytesPrPixel(); texWidth = texture->width(); texHeight = texture->height();
-    VkDeviceSize bufferSize = texChannels * texWidth * texHeight;
-	BufferHandle stagingBuffer = createGeneralBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-	//Checking if the texture has an alpha channel
-    VkFormat format{};
-	if (texChannels == 4) // image has an alpha channel
-		format = VK_FORMAT_R8G8B8A8_SRGB;
-	else
-		format = VK_FORMAT_R8G8B8_SRGB;
+        void* data{};
+        mDeviceFunctions->vkMapMemory(mWindow->device(), stagingBuffer.mBufferMemory, 0, bufferSize, 0, &data);
+        memcpy(data, texture->getPixels(), bufferSize);
+    }
+	//if the file is open, we read the data into the imageFileData vector
+    else
+    {
+        const std::uint32_t size = std::filesystem::file_size(filename);
+        std::vector<std::uint8_t> imageFileData(size);
+        file.read(reinterpret_cast<char*>(imageFileData.data()), size);
 
-    void* data{};
-	mDeviceFunctions->vkMapMemory(mWindow->device(), stagingBuffer.mBufferMemory, 0, bufferSize, 0, &data);
-    // memcpy(data, texture->getPixels(), bufferSize);
-    memcpy(data, pixelData, bufferSize);       //texture->getPixels(), bufferSize);
+        //Use the stb_image library to load the image
+        pixelData = stbi_load_from_memory(imageFileData.data(), size, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+
+        bufferSize = texChannels * texWidth * texHeight;
+        stagingBuffer = createGeneralBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+        void* data{};
+        mDeviceFunctions->vkMapMemory(mWindow->device(), stagingBuffer.mBufferMemory, 0, bufferSize, 0, &data);
+        memcpy(data, pixelData, bufferSize);
+    }
+
 	mDeviceFunctions->vkUnmapMemory(mWindow->device(), stagingBuffer.mBufferMemory);
                                          
 	TextureHandle textureHandle = createImage(texWidth, texHeight, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
@@ -1190,21 +1205,6 @@ VkImageView Renderer::createImageView(VkImage image, VkFormat format)
     }
 
     return view;
-}
-
-void Renderer::createImageViews() {
-    mSwapChainImageViews.resize(mSwapChainImages.size());
-
-    auto image_view_it = mSwapChainImageViews.begin();
-    for (VkImage image : mSwapChainImages) {
-        *image_view_it = createImageView(image, mSurfaceFormat.format);
-        image_view_it = std::next(image_view_it);
-    }
-}
-
-void Renderer::SetTexture(VkCommandBuffer commandBuffer, TextureHandle handle) {
-    mDeviceFunctions->vkCmdBindDescriptorSets( commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineLayout, 
-        1, 1, &handle.mTextureDescriptorSet, 0, nullptr);
 }
 
 void Renderer::destroyTexture(TextureHandle& textureHandle)
