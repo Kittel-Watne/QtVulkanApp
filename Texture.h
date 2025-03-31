@@ -23,9 +23,11 @@ public:
 
 	unsigned char* getBitmap() { return mBitmap; }
     unsigned char* getPixels() { return pixels; }
-	int getWidth() const { return mColumns; }
-	int getHeight() const { return mRows; }
+    inline int width() const { return mColumns; }
+    inline int height() const { return mRows; }
 	bool hasAlpha() const { return mAlphaUsed; }
+
+    inline int bytesPrPixel() const { return mBytesPrPixel;}
 
 private:
     unsigned char pixels[16];     // For the standard texture from the no-parameter constructor
@@ -44,8 +46,6 @@ private:
 
     ///Reads in the BMP file given in filename. Have to contain the path and filename.
     bool readBitmap(const std::string& filename);
-    ///Loads the image into GPU memory, and set up its parameters.
-    void setTexture();
 
     /**********************************/
     //This is put inside this class to avoid spamming the main namespace

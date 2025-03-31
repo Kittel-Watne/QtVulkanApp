@@ -138,6 +138,14 @@ private:
 
     BufferHandle mUniformBuffer{};
 	void* mUniformBufferLocation{ nullptr };
+
+    // Color shader material / shader
+    struct {
+        VkShaderModule vertShaderModule;
+        VkShaderModule fragShaderModule;
+		//VkPipelineLayout pipelineLayout{ VK_NULL_HANDLE };    //also should have had a spesific pipeline layout
+        VkPipeline pipeline{ VK_NULL_HANDLE };
+    } mColorMaterial;
 };
 
 #endif // RENDERER_H

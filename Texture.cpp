@@ -25,6 +25,8 @@ unsigned int Texture::id() const
     return mId;
 }
 
+
+
 bool Texture::readBitmap(const std::string &filename)
 {
     OBITMAPFILEHEADER bmFileHeader;
@@ -84,35 +86,6 @@ bool Texture::readBitmap(const std::string &filename)
         makeDummyTexture();
     }
     return false;
-}
-
-//Set up texture for use in OpenGL
-void Texture::setTexture()
-{
-    //glGenTextures(1, &mId);
-    //glBindTexture(GL_TEXTURE_2D, mId);
-    //qDebug("Texture " + textureFilename + " successfully read | id = " + std::to_string(mId) +
-    //                 "| bytes pr pixel: " + std::to_string(mBytesPrPixel) + " | using alpha:"+ std::to_string(mAlphaUsed));
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    //if(mAlphaUsed == false)                     //no alpha in this bmp
-    //    glTexImage2D(
-    //                GL_TEXTURE_2D,
-    //                0,                  //mipmap level
-    //                GL_RGB,             //internal format - what format should OpenGL use
-    //                mColumns,
-    //                mRows,
-    //                0,                  //always 0
-    //                GL_BGR,             //format of data from texture file -  bmp uses BGR, not RGB
-    //                GL_UNSIGNED_BYTE,   //size of each color channel
-    //                mBitmap);           //pointer to texture in memory
-
-    //else                                //alpha is present, so we set up an alpha channel
-    //    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mColumns, mRows, 0,  GL_BGRA, GL_UNSIGNED_BYTE, mBitmap);
-
-    //glGenerateMipmap(GL_TEXTURE_2D);
 }
 
 void Texture::makeDummyTexture()
