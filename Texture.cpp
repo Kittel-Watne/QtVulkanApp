@@ -31,6 +31,10 @@ bool Texture::readBitmap(const std::string &filename)
 {
     OBITMAPFILEHEADER bmFileHeader;
     OBITMAPINFOHEADER bmInfoHeader;
+    ODWORD redMask = 0x00FF0000;
+    ODWORD greenMask = 0x0000FF00;
+    ODWORD blueMask = 0x000000FF;
+    ODWORD alphaMask = 0xFF000000;
 
     std::string fileWithPath = filename;
 
@@ -65,6 +69,25 @@ bool Texture::readBitmap(const std::string &filename)
             return false;
         }
 
+        //Bitmap can be compressed using masking of the channels
+        if (bmInfoHeader.biCompression == 3)
+        {
+            // Read the bit masks for Bitfields compression
+            file.read(reinterpret_cast<char*>(&redMask), sizeof(redMask));
+            file.read(reinterpret_cast<char*>(&greenMask), sizeof(greenMask));
+            file.read(reinterpret_cast<char*>(&blueMask), sizeof(blueMask));
+            if (bmInfoHeader.biBitCount == 32)
+            {
+                file.read(reinterpret_cast<char*>(&alphaMask), sizeof(alphaMask));
+            }
+        }
+        else if (bmInfoHeader.biCompression != 0)
+        {
+            qDebug("ERROR: Unsupported BMP compression format");
+            makeDummyTexture();
+            return false;
+        }
+
         mColumns = bmInfoHeader.biWidth;
         mRows = bmInfoHeader.biHeight;
         mBytesPrPixel = bmInfoHeader.biBitCount / 8;
@@ -78,8 +101,6 @@ bool Texture::readBitmap(const std::string &filename)
             return false;
         }
 
-        mBitmap = new unsigned char[mColumns * mRows * mBytesPrPixel];
-
         //check if image data is offset - most often not used...
         if(bmFileHeader.bfOffBits !=0)
             file.seekg(bmFileHeader.bfOffBits);
@@ -91,8 +112,50 @@ bool Texture::readBitmap(const std::string &filename)
             qDebug("WARNING: InfoHeader is not 40 bytes, so image might not be correct");
             delete[] temp;
         }
+
+		//If bitmap is without alpha channel, we need to convert it to RGBA
+        if (mBytesPrPixel == 3)
+        {
+            unsigned char* tempBitmap = new unsigned char[mColumns * mRows * mBytesPrPixel];
+            mBitmap = new unsigned char[mColumns * mRows * 4]; // Allocate space for RGBA
+            for (int i = 0; i < mColumns * mRows; ++i)
+            {
+                unsigned char r = tempBitmap[i * 3 + 2];
+                unsigned char g = tempBitmap[i * 3 + 1];
+                unsigned char b = tempBitmap[i * 3 + 0];
+                mBitmap[i * 4 + 0] = r;
+                mBitmap[i * 4 + 1] = g;
+                mBitmap[i * 4 + 2] = b;
+                mBitmap[i * 4 + 3] = 255; // Set alpha to fully opaque
+            }
+            delete[] tempBitmap;
+        }
+        else
+            mBitmap = new unsigned char[mColumns * mRows * mBytesPrPixel];
+
         file.read((char *) mBitmap, mColumns * mRows * mBytesPrPixel);
         file.close();
+
+        // Process the pixel data using the bit masks
+        for (int i = 0; i < mColumns * mRows; ++i)
+        {
+            unsigned int pixel = reinterpret_cast<unsigned int*>(mBitmap)[i];
+            unsigned char r = (pixel & redMask) >> 16;
+            unsigned char g = (pixel & greenMask) >> 8;
+            unsigned char b = (pixel & blueMask);
+            unsigned char a = (mAlphaUsed) ? (pixel & alphaMask) >> 24 : 255;
+
+            mBitmap[i * mBytesPrPixel + 0] = r;
+            mBitmap[i * mBytesPrPixel + 1] = g;
+            mBitmap[i * mBytesPrPixel + 2] = b;
+            if (mAlphaUsed)
+                mBitmap[i * mBytesPrPixel + 3] = a;
+
+            // Debug output for the processed pixel values
+            //if(i % 40 == 0)
+                //qDebug() << "Pixel" << i << ": R=" << r << "G=" << g << "B=" << b << "A=" << a;
+        }
+
         return true;
     }
     else

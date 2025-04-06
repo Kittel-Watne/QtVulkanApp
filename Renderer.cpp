@@ -279,7 +279,7 @@ void Renderer::initResources()
     // Create the texture sampler
     createTextureSampler();
 
-    mTextureHandle = createTexture("../../Assets/hundA.bmp");
+    mTextureHandle = createTexture("../../../Assets/hund.bmp");
 
     getVulkanHWInfo(); // if you want to get info about the Vulkan hardware
 }
@@ -992,9 +992,9 @@ TextureHandle Renderer::createTexture(const char* filename)
     std::ifstream file(filename, std::ios::binary);
 
 	//if the file is not open, we create a default texture
-    if (!file.is_open()) 
+    if (file.is_open()) 
     {
-        Texture* texture = new Texture();   //new Texture(filename);
+        Texture* texture = new Texture(filename);
         bufferSize = texture->textureSize(); 
         texChannels = texture->bytesPrPixel(); 
         texWidth = texture->width(); 
@@ -1015,9 +1015,11 @@ TextureHandle Renderer::createTexture(const char* filename)
         file.read(reinterpret_cast<char*>(imageFileData.data()), size);
 
         //Use the stb_image library to load the image
+		//Force all images to RGBA format
         pixelData = stbi_load_from_memory(imageFileData.data(), size, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 
-        bufferSize = texChannels * texWidth * texHeight;
+		//texChannels might be 1, 3 or 4, so hardcode it to 4
+        bufferSize = 4 * texWidth * texHeight;
         stagingBuffer = createGeneralBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
