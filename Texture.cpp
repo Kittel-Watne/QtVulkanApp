@@ -38,9 +38,25 @@ bool Texture::readBitmap(const std::string &filename)
     file.open (fileWithPath.c_str(), std::ifstream::in | std::ifstream::binary);
     if (file.is_open())
     {
-        file.read((char *) &bmFileHeader, 14);
+        // Read the BMP file header manually - since the size of each field can be alligned
+        file.read(reinterpret_cast<char*>(&bmFileHeader.bfType), sizeof(bmFileHeader.bfType));
+        file.read(reinterpret_cast<char*>(&bmFileHeader.bfSize), sizeof(bmFileHeader.bfSize));
+        file.read(reinterpret_cast<char*>(&bmFileHeader.bfReserved1), sizeof(bmFileHeader.bfReserved1));
+        file.read(reinterpret_cast<char*>(&bmFileHeader.bfReserved2), sizeof(bmFileHeader.bfReserved2));
+        file.read(reinterpret_cast<char*>(&bmFileHeader.bfOffBits), sizeof(bmFileHeader.bfOffBits));
 
-        file.read((char *) &bmInfoHeader, sizeof(OBITMAPINFOHEADER));
+        // Read the BMP info header manually - since the size of each field can be alligned
+        file.read(reinterpret_cast<char*>(&bmInfoHeader.biSize), sizeof(bmInfoHeader.biSize));
+        file.read(reinterpret_cast<char*>(&bmInfoHeader.biWidth), sizeof(bmInfoHeader.biWidth));
+        file.read(reinterpret_cast<char*>(&bmInfoHeader.biHeight), sizeof(bmInfoHeader.biHeight));
+        file.read(reinterpret_cast<char*>(&bmInfoHeader.biPlanes), sizeof(bmInfoHeader.biPlanes));
+        file.read(reinterpret_cast<char*>(&bmInfoHeader.biBitCount), sizeof(bmInfoHeader.biBitCount));
+        file.read(reinterpret_cast<char*>(&bmInfoHeader.biCompression), sizeof(bmInfoHeader.biCompression));
+        file.read(reinterpret_cast<char*>(&bmInfoHeader.biSizeImage), sizeof(bmInfoHeader.biSizeImage));
+        file.read(reinterpret_cast<char*>(&bmInfoHeader.biXPelsPerMeter), sizeof(bmInfoHeader.biXPelsPerMeter));
+        file.read(reinterpret_cast<char*>(&bmInfoHeader.biYPelsPerMeter), sizeof(bmInfoHeader.biYPelsPerMeter));
+        file.read(reinterpret_cast<char*>(&bmInfoHeader.biClrUsed), sizeof(bmInfoHeader.biClrUsed));
+        file.read(reinterpret_cast<char*>(&bmInfoHeader.biClrImportant), sizeof(bmInfoHeader.biClrImportant));
 
         if (bmFileHeader.bfType != 19778)
         {
