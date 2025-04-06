@@ -279,7 +279,7 @@ void Renderer::initResources()
     // Create the texture sampler
     createTextureSampler();
 
-    mTextureHandle = createTexture("../../../Assets/hund.bmp");
+    mTextureHandle = createTexture("../../Assets/hund.bmp");
 
     getVulkanHWInfo(); // if you want to get info about the Vulkan hardware
 }
@@ -992,16 +992,15 @@ TextureHandle Renderer::createTexture(const char* filename)
     std::ifstream file(filename, std::ios::binary);
 
 	//if the file is not open, we create a default texture
-    if (file.is_open()) 
+    if (!file.is_open()) 
     {
-        Texture* texture = new Texture(filename);
+        Texture* texture = new Texture();   // (filename);
         bufferSize = texture->textureSize(); 
         texChannels = texture->bytesPrPixel(); 
         texWidth = texture->width(); 
         texHeight = texture->height();
         stagingBuffer = createGeneralBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
 
         void* data{};
         mDeviceFunctions->vkMapMemory(mWindow->device(), stagingBuffer.mBufferMemory, 0, bufferSize, 0, &data);

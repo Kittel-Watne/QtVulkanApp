@@ -25,8 +25,6 @@ unsigned int Texture::id() const
     return mId;
 }
 
-
-
 bool Texture::readBitmap(const std::string &filename)
 {
     OBITMAPFILEHEADER bmFileHeader;
