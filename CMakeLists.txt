@@ -9,7 +9,6 @@ qt_add_executable(QtVulkanApp
     Renderer.cpp Renderer.h
     MainWindow.cpp MainWindow.h
     main.cpp
-
     VulkanWindow.h VulkanWindow.cpp
     TriangleSurface.h TriangleSurface.cpp
     VisualObject.h VisualObject.cpp
@@ -19,7 +18,6 @@ qt_add_executable(QtVulkanApp
     Input.h
     WorldAxis.h WorldAxis.cpp
     Utilities.h
-    Texture.cpp Texture.h
     stb_image.h
     stb_image.cpp
 )

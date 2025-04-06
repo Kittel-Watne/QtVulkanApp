@@ -83,9 +83,6 @@ private:
 	std::vector<VisualObject*> mObjects;    //All objects in the program  
     std::unordered_map<std::string, VisualObject*> mMap;    // alternativ container
 
-
-    std::vector<class Texture*> mTextures;  //All textures in the program - not used now
-
     void createBuffer(VkDevice logicalDevice,
                       const VkDeviceSize uniAlign, VisualObject* visualObject,
                       VkBufferUsageFlags usage=VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);

@@ -4,7 +4,6 @@
 #include <fstream>
 #include "VulkanWindow.h"
 #include "WorldAxis.h"
-#include "Texture.h"
 #include "Triangle.h"
 #include "TriangleSurface.h"
 #include "stb_image.h"
@@ -37,8 +36,8 @@ Renderer::Renderer(QVulkanWindow *w, bool msaa)
     // Legger inn objekter i map
     // **************************************
     //std::string navn{"navn"}; // Skal VisualObject klassen få en navn-variabel?
-    for (auto it=mObjects.begin(); it!=mObjects.end(); it++)
-        mMap.insert(std::pair<std::string, VisualObject*>{(*it)->getName(),*it});
+    // for (auto it=mObjects.begin(); it!=mObjects.end(); it++)
+    //     mMap.insert(std::pair<std::string, VisualObject*>{(*it)->getName(),*it});
 
 	//Inital position of the camera
     mCamera.setPosition(QVector3D(-0.5, -0.5, -8));
@@ -279,9 +278,9 @@ void Renderer::initResources()
     // Create the texture sampler
     createTextureSampler();
 
-    mTextureHandle = createTexture("../../Assets/hund.bmp");
+    mTextureHandle = createTexture("../../Assets/Heightmap.jpg"); //Heightmap.jpg HundA.bmp
 
-    getVulkanHWInfo(); // if you want to get info about the Vulkan hardware
+    // getVulkanHWInfo(); // if you want to get info about the Vulkan hardware
 }
 
 // This function is called at startup, and when the app window is resized
@@ -910,7 +909,6 @@ uint32_t Renderer::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags req
     return 0;
 }
 
-
 // Function to create a command buffer that is short lived and not a part of the Rendering command
 VkCommandBuffer Renderer::beginTransientCommandBuffer()
 {
@@ -991,22 +989,35 @@ TextureHandle Renderer::createTexture(const char* filename)
 	//Open the file and read the data into the imageFileData vector
     std::ifstream file(filename, std::ios::binary);
 
-	//if the file is not open, we create a default texture
+	//if the file is not open, we create a tiny default texture
     if (!file.is_open()) 
     {
-        Texture* texture = new Texture();   // (filename);
-        bufferSize = texture->textureSize(); 
-        texChannels = texture->bytesPrPixel(); 
-        texWidth = texture->width(); 
-        texHeight = texture->height();
+        //Dummy texture 2x2 pixels, 4 bytes per pixel
+        pixelData = new stbi_uc[16]{};  //stbi_uc == unsigned char
+
+		//Set some colors - alpha to 255
+        pixelData[0] = 255;
+		pixelData[3] = 255; //alpha
+        pixelData[5] = 255;
+        pixelData[7] = 255; //alpha
+        pixelData[10] = 255;
+		pixelData[11] = 255; //alpha
+        pixelData[12] = 255;
+        pixelData[13] = 255;
+		pixelData[15] = 255; //alpha
+
+        bufferSize = 16;  // 2 * 2 * 4 bytes
+        texChannels = 4;
+        texWidth = 2;
+        texHeight = 2;
         stagingBuffer = createGeneralBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
         void* data{};
         mDeviceFunctions->vkMapMemory(mWindow->device(), stagingBuffer.mBufferMemory, 0, bufferSize, 0, &data);
-        memcpy(data, texture->getPixels(), bufferSize);
+        memcpy(data, pixelData, bufferSize);
     }
-	//if the file is open, we read the data into the imageFileData vector
+	//if the file is open, we read the data into the imageFileData vector using stb_image
     else
     {
         const std::uint32_t size = std::filesystem::file_size(filename);
@@ -1026,6 +1037,25 @@ TextureHandle Renderer::createTexture(const char* filename)
         mDeviceFunctions->vkMapMemory(mWindow->device(), stagingBuffer.mBufferMemory, 0, bufferSize, 0, &data);
         memcpy(data, pixelData, bufferSize);
     }
+
+    /***************** Height Map test!!! ***************/
+    //Test to look at the pixel data values in the image
+	//Jumping through the pixel data by 1200 bytes at a time to get a sample of the data
+	//We see that in a grey scale image, the R, G, B values are the same! The A value is 255
+    unsigned char temp{};
+    for (int i = 0; i < texWidth * texHeight; i += 1200)
+    {
+        temp = pixelData[i];
+        qDebug() << "Pixel " << i << "r " << temp;
+        temp = pixelData[i + 1];
+        qDebug() << "Pixel " << i << "g " << temp;
+        temp = pixelData[i + 2];
+        qDebug() << "Pixel " << i << "b " << temp;
+        temp = pixelData[i + 3];
+        qDebug() << "Pixel " << i << "a " << temp;
+    }
+    /*****************                    ***************/
+
 
 	mDeviceFunctions->vkUnmapMemory(mWindow->device(), stagingBuffer.mBufferMemory);
                                          
