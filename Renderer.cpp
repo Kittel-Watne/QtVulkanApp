@@ -6,6 +6,7 @@
 #include "WorldAxis.h"
 #include "Triangle.h"
 #include "TriangleSurface.h"
+#include "HeightMap.h"
 #include "stb_image.h"
 
 /*** Renderer class ***/
@@ -27,10 +28,13 @@ Renderer::Renderer(QVulkanWindow *w, bool msaa)
     mObjects.push_back(new Triangle());
     mObjects.push_back((new TriangleSurface()));
     mObjects.push_back((new WorldAxis()));
+	mObjects.push_back(new HeightMap());
     // Dag 030225
     mObjects.at(0)->setName("tri");
     mObjects.at(1)->setName("quad");
     mObjects.at(2)->setName("axis");
+	mObjects.at(3)->setName("terrain");
+    static_cast<HeightMap*>(mObjects.at(3))->makeTerrain("../../Assets/Hund.bmp");
 
     // **************************************
     // Legger inn objekter i map
@@ -278,7 +282,7 @@ void Renderer::initResources()
     // Create the texture sampler
     createTextureSampler();
 
-    mTextureHandle = createTexture("../../Assets/Heightmap.jpg"); //Heightmap.jpg HundA.bmp
+    mTextureHandle = createTexture("../../Assets/Hund.bmp"); //Heightmap.jpg HundA.bmp
 
     // getVulkanHWInfo(); // if you want to get info about the Vulkan hardware
 }

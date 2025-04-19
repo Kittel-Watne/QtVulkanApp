@@ -1,8 +1,25 @@
 #include "HeightMap.h"
 #include "Vertex.h"
+#include "stb_image.h"
 
 HeightMap::HeightMap()
 { }
+
+void HeightMap::makeTerrain(std::string heightMapImage)
+{
+	//Load the heightmap image
+	//Using stb_image to load the image
+	stbi_uc* pixelData = stbi_load(heightMapImage.c_str(), &mWidth, &mHeight, &mChannels, STBI_rgb_alpha);
+	if (pixelData == nullptr)
+    {
+	    qDebug() << "Failed to load heightmap image!";
+	    return;
+	}
+	//Make the terrain from the pixel data
+	makeTerrain(pixelData, mWidth, mHeight);
+	stbi_image_free(pixelData);
+
+}
 
 //Function that makes a terrain grid from a heightmap, using the values in the heightmap as height.
 //This function will crash if the width and height of the heightmap is not set correct!
@@ -15,7 +32,7 @@ void HeightMap::makeTerrain(unsigned char* textureData, int widthIn, int heightI
 
     //How many meters between each vertex in both x and z direction
     //This should be sent in as a parameter!
-    float horisontalSpacing{.5f};
+    float horisontalSpacing{.2f};
 
     //Scaling the height read from the heightmap. 0 -> 255 meters if this is set to 1
     //This should be sent in as a parameter!
@@ -25,7 +42,7 @@ void HeightMap::makeTerrain(unsigned char* textureData, int widthIn, int heightI
     //Moves the terrain mesh up or down
     //Because of Barycentric calculations, we want the terrain to be in World coordinates!
 	//So we don't want to move the terrain up or down in the Y axis after it is made
-    float heightPlacement{-5.f};
+    float heightPlacement{-10.f};
 
     //Getting the scale of the heightmap
     //Using depth as the name of texture height, to not confuse with terrain height
@@ -34,8 +51,8 @@ void HeightMap::makeTerrain(unsigned char* textureData, int widthIn, int heightI
 
     //Temp variables for creating the mesh
     //Adding offset so the middle of the terrain will be in World origo
-    float vertexXStart{0.f};            // if world origo should be at center use: {0.f - width * horisontalSpacing / 2};
-    float vertexZStart{0.f};            // if world origo should be at center use: {0.f + depth * horisontalSpacing / 2};
+    float vertexXStart{ 0.f - width * horisontalSpacing / 2 };            // if world origo should be at center use: {0.f - width * horisontalSpacing / 2};
+    float vertexZStart{ 0.f + depth * horisontalSpacing / 2 };            // if world origo should be at center use: {0.f + depth * horisontalSpacing / 2};
 
     //Loop to make the mesh from the values read from the heightmap (textureData)
 	//Double for-loop to make the depth and the width of the terrain in one go
@@ -47,7 +64,7 @@ void HeightMap::makeTerrain(unsigned char* textureData, int widthIn, int heightI
             //and scale it according to variables
             // Calculate the correct index for the R value of each pixel
             int index = (w + d * width) * 4; // Each pixel has 4 bytes (RGBA)
-            float heightFromBitmap = static_cast<float>(textureData[index]);         // * heightSpacing + heightPlacement;
+            float heightFromBitmap = static_cast<float>(textureData[index]) * heightSpacing + heightPlacement;
 			//                                          x - value                      y-value               z-value
             mVertices.emplace_back(Vertex{vertexXStart + (w * horisontalSpacing), heightFromBitmap, vertexZStart - (d * horisontalSpacing),
 				//  dummy normal=0,1,0                  Texture coordinates
