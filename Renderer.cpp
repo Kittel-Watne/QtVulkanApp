@@ -39,7 +39,7 @@ Renderer::Renderer(QVulkanWindow *w, bool msaa)
     mObjects.at(0)->setName("tri");
     mObjects.at(1)->setName("quad");
     mObjects.at(2)->setName("axis");
-	  mObjects.at(3)->setName("suzanne");
+    mObjects.at(3)->setName("suzanne");
     mObjects.at(4)->setName("terrain");
     
     
@@ -140,7 +140,7 @@ void Renderer::initResources()
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     
   
-  //pipelineLayoutInfo.setLayoutCount = 0;
+    pipelineLayoutInfo.setLayoutCount = 0;
     pipelineLayoutInfo.pushConstantRangeCount = 1;                  
     pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;    
     pipelineLayoutInfo.setLayoutCount = descriptorSetLayouts.size();
@@ -554,7 +554,7 @@ void Renderer::createVertexBuffer(const VkDeviceSize uniformAlignment, VisualObj
 	endTransientCommandBuffer(commandBuffer);
 	
     //Free the staging buffer
-	destroyBuffer(stagingHandle);
+    DestroyBuffer(stagingHandle);
 }
 
 void Renderer::createIndexBuffer(const VkDeviceSize uniformAlignment, VisualObject* visualObject)
@@ -590,7 +590,7 @@ void Renderer::createIndexBuffer(const VkDeviceSize uniformAlignment, VisualObje
 	endTransientCommandBuffer(commandBuffer);
 
 	//Free the staging buffer
-	destroyBuffer(stagingHandle);
+    DestroyBuffer(stagingHandle);
 }
 
 BufferHandle Renderer::createGeneralBuffer(const VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
@@ -848,7 +848,7 @@ void Renderer::releaseResources()
     }
 
 
-	destroyBuffer(mUniformBuffer);
+    DestroyBuffer(mUniformBuffer);
 
     if (mDescriptorSetLayout) {
         mDeviceFunctions->vkDestroyDescriptorSetLayout(dev, mDescriptorSetLayout, nullptr);
@@ -864,7 +864,7 @@ void Renderer::releaseResources()
     for (auto it=mObjects.begin(); it!=mObjects.end(); it++) {
         if ((*it)->getVBuffer()) {
 			BufferHandle handle { (*it)->getVBufferMemory(), (*it)->getVBuffer() };
-			destroyBuffer(handle);
+            DestroyBuffer(handle);
             (*it)->getVBuffer() = VK_NULL_HANDLE;
             (*it)->getVBufferMemory() = VK_NULL_HANDLE;
 
@@ -878,7 +878,7 @@ void Renderer::releaseResources()
 /////////////////////////////////////////////////////////////////////////////////////////////
         if ((*it)->getIBuffer()) {
             BufferHandle handle{ (*it)->getIBufferMemory(), (*it)->getIBuffer() };
-            destroyBuffer(handle);
+            DestroyBuffer(handle);
             (*it)->getIBuffer() = VK_NULL_HANDLE;
         }
 
@@ -973,7 +973,7 @@ void Renderer::endTransientCommandBuffer(VkCommandBuffer commandBuffer)
 }
 
 // Function to destroy a buffer and its memory
-void Renderer::destroyBuffer(BufferHandle handle) {
+void Renderer::DestroyBuffer(BufferHandle handle) {
     mDeviceFunctions->vkDeviceWaitIdle(mWindow->device());
     mDeviceFunctions->vkDestroyBuffer(mWindow->device(), handle.mBuffer, nullptr);
     mDeviceFunctions->vkFreeMemory(mWindow->device(), handle.mBufferMemory, nullptr);
@@ -1121,7 +1121,7 @@ TextureHandle Renderer::createTexture(const char* filename)
 
     mDeviceFunctions->vkUpdateDescriptorSets(mWindow->device(), 1, &writeDescriptorSet, 0, nullptr);
 	
-    destroyBuffer(stagingBuffer);
+    DestroyBuffer(stagingBuffer);
 
 	stbi_image_free(pixelData);
 

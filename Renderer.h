@@ -95,7 +95,7 @@ private:
     void createDescriptorSetLayouts();
 	void createDescriptorSet();
 	void createDescriptorPools();
-    void destroyBuffer(BufferHandle handle);
+
 
 	void createTextureSampler();
     TextureHandle createTexture(const char* filename);
