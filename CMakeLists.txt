@@ -9,6 +9,7 @@ qt_add_executable(QtVulkanApp
     Renderer.cpp Renderer.h
     MainWindow.cpp MainWindow.h
     main.cpp
+
     VulkanWindow.h VulkanWindow.cpp
     TriangleSurface.h TriangleSurface.cpp
     VisualObject.h VisualObject.cpp
@@ -19,17 +20,11 @@ qt_add_executable(QtVulkanApp
     WorldAxis.h WorldAxis.cpp
     Utilities.h
     ObjMesh.h ObjMesh.cpp
-    stb_image.h
-    stb_image.cpp
-    HeightMap.h HeightMap.cpp
-
 )
 # Define the shader files
 set(SHADER_FILES
     color.frag
     color.vert
-    texture.frag
-    texture.vert
 )
 
 # Add the shader files to the project
@@ -57,19 +52,9 @@ set_source_files_properties("color_vert.spv"
     PROPERTIES QT_RESOURCE_ALIAS "color_vert.spv"
 )
 
-set_source_files_properties("texture_frag.spv"
-    PROPERTIES QT_RESOURCE_ALIAS "texture_frag.spv"
-)
-
-set_source_files_properties("texture_vert.spv"
-    PROPERTIES QT_RESOURCE_ALIAS "texture_vert.spv"
-)
-
 set(QtVulkanApp_resource_files
     "color_frag.spv"
     "color_vert.spv"
-    "texture_frag.spv"
-    "texture_vert.spv"
 )
 
 qt_add_resources(QtVulkanApp "QtVulkanApp"
@@ -94,39 +79,19 @@ install(SCRIPT ${deploy_script})
 
 # auto-compilation of the shaders:
 add_custom_target(
-    PreBuildCommandCF ALL
+    PreBuildCommandF ALL
     COMMAND glslc color.frag -o color_frag.spv
-#   This version includes the debug info in the compiled shader - good for RenderDoc
-#   COMMAND glslangValidator -g -V -o color_frag.spv color.frag
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMENT "Compiling color fragment shader"
+    COMMENT "Compiling fragment shader"
 )
 add_custom_target(
-    PreBuildCommandCV ALL
+    PreBuildCommandV ALL
     COMMAND glslc color.vert -o color_vert.spv
-#   COMMAND glslangValidator -g -V -o color_vert.spv color.vert
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMENT "Compiling color vertex shader"
-)
-add_custom_target(
-    PreBuildCommandTF ALL
-    COMMAND glslc texture.frag -o texture_frag.spv
-#   This version includes the debug info in the compiled shader - good for RenderDoc
-#   COMMAND glslangValidator -g -V -o texture_frag.spv texture.frag
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMENT "Compiling texture fragment shader"
-)
-add_custom_target(
-    PreBuildCommandTV ALL
-    COMMAND glslc texture.vert -o texture_vert.spv
-#   COMMAND glslangValidator -g -V -o texture_vert.spv texture.vert
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMENT "Compiling texture vertex shader"
+    COMMENT "Compiling vertex shader"
 )
 
-add_dependencies(QtVulkanApp PreBuildCommandCF)
-add_dependencies(QtVulkanApp PreBuildCommandCV)
-add_dependencies(QtVulkanApp PreBuildCommandTF)
-add_dependencies(QtVulkanApp PreBuildCommandTV)
+add_dependencies(QtVulkanApp PreBuildCommandF)
+add_dependencies(QtVulkanApp PreBuildCommandV)
 
 
