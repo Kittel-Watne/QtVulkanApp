@@ -240,5 +240,13 @@ void VulkanWindow::handleInput()
     }
     */
     //Player
-
+    mSelectedObject->setSpeedX(0.f);
+    if (mInput.W)
+        mSelectedObject->setSpeedX(mObjectSpeedX);
+    if (mInput.S)
+        mSelectedObject->setSpeedX(-mObjectSpeedX);
+    if (mInput.D)
+        mSelectedObject->setSpeedZ(-mObjectSpeedZ);
+    if (mInput.A)
+        mSelectedObject->setSpeedZ(mObjectSpeedZ);
 }

@@ -14,6 +14,11 @@ public:
     void move(float x, float y = 0.0f, float z = 0.0f);
     void scale(float s);
     void rotate(float t, float x, float y, float z);
+    void update();
+
+    void setSpeedX(float newSpeed);
+    void setSpeedZ(float newSpeed);
+
 
 	//Setters and Getters
     inline std::vector<Vertex> getVertices() { return mVertices; }
@@ -43,6 +48,9 @@ protected:
     //VkPrimitiveTopology mTopology{ VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST }; //not used
 
     int drawType{ 0 }; // 0 = fill, 1 = line
+private:
+    float mSpeedX;
+    float mSpeedZ;
 };
 
 #endif // VISUALOBJECT_H

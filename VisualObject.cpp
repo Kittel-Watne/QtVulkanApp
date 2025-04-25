@@ -19,3 +19,16 @@ void VisualObject::rotate(float t, float x, float y, float z)
 {
     mMatrix.rotate(t, x, y, z);
 }
+
+void VisualObject::update()
+{
+    move(mSpeedX, 0, mSpeedZ);
+    //Barysentric changes to Y will be added here most likely
+}
+
+void VisualObject::setSpeedX(float newSpeed){
+    mSpeedX = newSpeed;
+}
+void VisualObject::setSpeedZ(float newSpeed){
+    mSpeedZ = newSpeed;
+}

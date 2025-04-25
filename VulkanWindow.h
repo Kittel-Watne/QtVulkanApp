@@ -39,6 +39,8 @@ protected:
 
     QVulkanWindowRenderer* mRenderer{ nullptr };
     VisualObject* mSelectedObject{ nullptr };
+    float mObjectSpeedX{0.005f};
+    float mObjectSpeedZ{0.005f};
     int mIndex{0};
 
 private:

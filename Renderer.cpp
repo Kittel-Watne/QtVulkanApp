@@ -7,6 +7,7 @@
 #include "Triangle.h"
 #include "TriangleSurface.h"
 #include "HeightMap.h"
+#include "playerobject.h"
 #include "stb_image.h"
 #include "ObjMesh.h"
 
@@ -32,8 +33,13 @@ Renderer::Renderer(QVulkanWindow *w, bool msaa)
     mObjects.push_back((new WorldAxis()));
     */
 	mObjects.push_back(new HeightMap());
-    mPlayer = new ObjMesh("suzanne.obj");
+    mObjects.push_back(new ObjMesh("suzanne.obj"));
+
+    mPlayer = (new PlayerObject());
     mObjects.push_back(mPlayer);
+
+
+
     // Dag 030225
     /*
     mObjects.at(0)->setName("tri");
@@ -42,6 +48,7 @@ Renderer::Renderer(QVulkanWindow *w, bool msaa)
     */
     mObjects.at(0)->setName("terrain");
     mObjects.at(1)->setName("Suzanne");
+    mObjects.at(2)->setName("Player");
 
     static_cast<HeightMap*>(mObjects.at(0))->makeTerrain("../../Assets/Hund.bmp");
 
@@ -322,6 +329,7 @@ void Renderer::startNextFrame()
     //Has to be done each frame to get smooth movement
     mVulkanWindow->handleInput();
     mCamera.update();               //input can have moved the camera
+    //mPlayer->update();
 
     VkCommandBuffer commandBuffer = mWindow->currentCommandBuffer();
 

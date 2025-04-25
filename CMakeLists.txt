@@ -22,6 +22,7 @@ qt_add_executable(QtVulkanApp
     stb_image.cpp
     HeightMap.h HeightMap.cpp
     objmesh.h objmesh.cpp
+    playerobject.h playerobject.cpp
 
 )
 # Define the shader files
