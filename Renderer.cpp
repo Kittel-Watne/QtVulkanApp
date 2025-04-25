@@ -8,6 +8,7 @@
 #include "TriangleSurface.h"
 #include "HeightMap.h"
 #include "stb_image.h"
+#include "ObjMesh.h"
 
 /*** Renderer class ***/
 Renderer::Renderer(QVulkanWindow *w, bool msaa)
@@ -25,16 +26,24 @@ Renderer::Renderer(QVulkanWindow *w, bool msaa)
         }
     }
     // Dag 230125
+    /*
     mObjects.push_back(new Triangle());
     mObjects.push_back((new TriangleSurface()));
     mObjects.push_back((new WorldAxis()));
+    */
 	mObjects.push_back(new HeightMap());
+    mPlayer = new ObjMesh("suzanne.obj");
+    mObjects.push_back(mPlayer);
     // Dag 030225
+    /*
     mObjects.at(0)->setName("tri");
     mObjects.at(1)->setName("quad");
     mObjects.at(2)->setName("axis");
-	mObjects.at(3)->setName("terrain");
-    static_cast<HeightMap*>(mObjects.at(3))->makeTerrain("../../Assets/Hund.bmp");
+    */
+    mObjects.at(0)->setName("terrain");
+    mObjects.at(1)->setName("Suzanne");
+
+    static_cast<HeightMap*>(mObjects.at(0))->makeTerrain("../../Assets/Hund.bmp");
 
     // **************************************
     // Legger inn objekter i map
@@ -44,10 +53,12 @@ Renderer::Renderer(QVulkanWindow *w, bool msaa)
     //     mMap.insert(std::pair<std::string, VisualObject*>{(*it)->getName(),*it});
 
 	//Inital position of the camera
-    mCamera.setPosition(QVector3D(-0.5, -0.5, -10));
+    mCamera.setPosition(QVector3D(-0.5, -0.5, -15));
 
     //Need access to our VulkanWindow so making a convenience pointer
     mVulkanWindow = dynamic_cast<VulkanWindow*>(w);
+
+    mVulkanWindow->setSelectedObject(mPlayer);
 }
 
 //Automatically called by Qt on Renderer startup
@@ -353,7 +364,7 @@ void Renderer::startNextFrame()
     mDeviceFunctions->vkCmdEndRenderPass(commandBuffer);
 
     //Hardcoded!!!
-    mObjects.at(1)->rotate(1.0f, 0.0f, 0.0f, 1.0f);
+    //mObjects.at(1)->rotate(1.0f, 0.0f, 0.0f, 1.0f);
     
     mWindow->frameReady();
     mWindow->requestUpdate(); // render continuously, throttled by the presentation rate

@@ -37,13 +37,15 @@ void VulkanWindow::keyPressEvent(QKeyEvent *event)
         if(mSelectedObject)
         {
             qDebug("Move object");
-            mSelectedObject->move(-0.1f);
+            //mSelectedObject->move(-0.1f);
         }
     }
     if(event->key() == Qt::Key_F)
     {
+        /*
         qDebug("Scaling object");
         dynamic_cast<Renderer*>(mRenderer)->mObjects.at(mIndex)->scale(0.9f);
+        */
     }
     if (event->key() == Qt::Key_Escape)
     {
@@ -237,4 +239,6 @@ void VulkanWindow::handleInput()
             mCamera->updateHeigth(-mCameraSpeed);
     }
     */
+    //Player
+
 }

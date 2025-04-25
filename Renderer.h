@@ -118,6 +118,8 @@ private:
     Camera mCamera;
     class VulkanWindow* mVulkanWindow{ nullptr };
 
+    VisualObject* mPlayer;
+
 	VkCommandBuffer beginTransientCommandBuffer();
 	void endTransientCommandBuffer(VkCommandBuffer commandBuffer);
 
