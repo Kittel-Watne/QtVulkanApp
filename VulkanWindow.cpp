@@ -57,7 +57,7 @@ void VulkanWindow::keyPressEvent(QKeyEvent *event)
 
     if(event->key() == Qt::Key_R)
     {
-        dynamic_cast<Renderer*>(mRenderer)->mCamera.rotate(45, 0.0f, 0.0f, 1.0f);
+        //dynamic_cast<Renderer*>(mRenderer)->mCamera.rotate(45, 0.0f, 0.0f, 1.0f);
     }
 
     //    You get the keyboard input like this
@@ -215,6 +215,7 @@ void VulkanWindow::mouseMoveEvent(QMouseEvent *event)
 
 void VulkanWindow::handleInput()
 {
+    /*
     //Camera
     mCamera->setSpeed(0.f);  //cancel last frame movement
     if (mInput.RMB)
@@ -232,4 +233,5 @@ void VulkanWindow::handleInput()
         if (mInput.E)
             mCamera->updateHeigth(-mCameraSpeed);
     }
+    */
 }
