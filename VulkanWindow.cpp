@@ -167,11 +167,12 @@ void VulkanWindow::wheelEvent(QWheelEvent *event)
 
     //if RMB, change the speed of the camera
     if (mInput.RMB)
-    {
+    {   /*
         if (numDegrees.y() < 1)
             setCameraSpeed(-0.002f);
         if (numDegrees.y() > 1)
             setCameraSpeed(0.002f);
+        */
     }
     qDebug("CameraSpeed: %f", mCameraSpeed);
 }
@@ -198,6 +199,7 @@ void VulkanWindow::mouseReleaseEvent(QMouseEvent *event)
 
 void VulkanWindow::mouseMoveEvent(QMouseEvent *event)
 {
+    /*
     if (mInput.RMB)
     {
         //Using mMouseXYlast as deltaXY so we don't need extra variables
@@ -211,6 +213,7 @@ void VulkanWindow::mouseMoveEvent(QMouseEvent *event)
     }
     mMouseXlast = event->pos().x();
     mMouseYlast = event->pos().y();
+    */
 }
 
 void VulkanWindow::handleInput()
