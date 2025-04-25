@@ -57,10 +57,8 @@ protected:
     //Vulkan resources:
     QVulkanWindow* mWindow{ nullptr };
     QVulkanDeviceFunctions* mDeviceFunctions{ nullptr };
-
-    VkDeviceMemory mBufferMemory{ VK_NULL_HANDLE };
-    VkBuffer mBuffer{ VK_NULL_HANDLE };
  
+
     //For Uniform buffers
     VkDescriptorPool mDescriptorPool{ VK_NULL_HANDLE };
     VkDescriptorSetLayout mDescriptorSetLayout{ VK_NULL_HANDLE };
@@ -87,9 +85,12 @@ private:
                       const VkDeviceSize uniAlign, VisualObject* visualObject,
                       VkBufferUsageFlags usage=VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 
-	//Start of Uniforms and DescriptorSets
+	//Updated to a more flexible way of making buffers
 	void createVertexBuffer(const VkDeviceSize uniformAlignment, VisualObject* visualObject);
 	void createIndexBuffer(const VkDeviceSize uniformAlignment, VisualObject* visualObject);
+
+    void DestroyBuffer(BufferHandle handle);
+
     void createUniformBuffer();
     void createDescriptorSetLayouts();
 	void createDescriptorSet();
@@ -110,6 +111,7 @@ private:
     VkSurfaceFormatKHR mSurfaceFormat{};
 
     TextureHandle mTextureHandle{};
+    
 
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags requiredProperties);
 
