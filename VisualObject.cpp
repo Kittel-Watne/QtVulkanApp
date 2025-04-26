@@ -32,3 +32,14 @@ void VisualObject::setSpeedX(float newSpeed){
 void VisualObject::setSpeedZ(float newSpeed){
     mSpeedZ = newSpeed;
 }
+void VisualObject::setDrawType(int typeValue){
+    if (typeValue == 0){
+        drawType = 0;
+        return;
+    }
+    if (typeValue == 1){
+        drawType = 1;
+        return;
+    }
+    return;
+}

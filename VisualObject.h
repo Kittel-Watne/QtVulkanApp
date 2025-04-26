@@ -19,6 +19,8 @@ public:
     void setSpeedX(float newSpeed);
     void setSpeedZ(float newSpeed);
 
+    void setDrawType(int typeValue);
+
 
 	//Setters and Getters
     inline std::vector<Vertex> getVertices() { return mVertices; }
@@ -49,8 +51,8 @@ protected:
 
     int drawType{ 0 }; // 0 = fill, 1 = line
 private:
-    float mSpeedX;
-    float mSpeedZ;
+    float mSpeedX = 0.0f;
+    float mSpeedZ = 0.0f;
 };
 
 #endif // VISUALOBJECT_H

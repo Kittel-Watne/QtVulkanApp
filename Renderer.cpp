@@ -34,6 +34,7 @@ Renderer::Renderer(QVulkanWindow *w, bool msaa)
     */
 	mObjects.push_back(new HeightMap());
     mObjects.push_back(new ObjMesh("suzanne.obj"));
+    mObjects.back()->setDrawType(1);
 
     mPlayer = (new PlayerObject());
     mObjects.push_back(mPlayer);
@@ -329,7 +330,7 @@ void Renderer::startNextFrame()
     //Has to be done each frame to get smooth movement
     mVulkanWindow->handleInput();
     mCamera.update();               //input can have moved the camera
-    //mPlayer->update();
+    mPlayer->update();
 
     VkCommandBuffer commandBuffer = mWindow->currentCommandBuffer();
 
