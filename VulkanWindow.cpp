@@ -240,14 +240,23 @@ void VulkanWindow::handleInput()
     }
     */
     //Player
-    mSelectedObject->setSpeedX(0.f);
-    mSelectedObject->setSpeedZ(0.f);
+    mSelectedObject->setSpeedX(0.0f);
+    mSelectedObject->setSpeedZ(0.0f);
     if (mInput.W)
         mSelectedObject->setSpeedZ(-mObjectSpeedX);
     if (mInput.S)
         mSelectedObject->setSpeedZ(mObjectSpeedX);
+    //If both are held, you will not move
+    if(mInput.S && mInput.W){
+        mSelectedObject->setSpeedZ(0.0f);
+    }
+
     if (mInput.D)
         mSelectedObject->setSpeedX(mObjectSpeedZ);
     if (mInput.A)
         mSelectedObject->setSpeedX(-mObjectSpeedZ);
+    //If both are held, you will not move
+    if(mInput.D && mInput.A){
+        mSelectedObject->setSpeedX(0.0f);
+    }
 }

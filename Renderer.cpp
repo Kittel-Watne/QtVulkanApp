@@ -34,7 +34,7 @@ Renderer::Renderer(QVulkanWindow *w, bool msaa)
     */
 	mObjects.push_back(new HeightMap());
     mObjects.push_back(new ObjMesh("suzanne.obj"));
-    mObjects.back()->setDrawType(1);
+    mObjects.back()->setDrawType(1);    //Changing drawtype so that suzanne is based on colors and not textures
 
     mPlayer = (new PlayerObject());
     mObjects.push_back(mPlayer);
