@@ -32,7 +32,7 @@ void HeightMap::makeTerrain(unsigned char* textureData, int widthIn, int heightI
 
     //How many meters between each vertex in both x and z direction
     //This should be sent in as a parameter!
-    float horisontalSpacing{.2f};
+    float horisontalSpacing{.2f};                       //If you change this, you also have to change the locate point function
 
     //Scaling the height read from the heightmap. 0 -> 255 meters if this is set to 1
     //This should be sent in as a parameter!
@@ -53,6 +53,10 @@ void HeightMap::makeTerrain(unsigned char* textureData, int widthIn, int heightI
     //Adding offset so the middle of the terrain will be in World origo
     float vertexXStart{ 0.f - width * horisontalSpacing / 2 };            // if world origo should be at center use: {0.f - width * horisontalSpacing / 2};
     float vertexZStart{ 0.f + depth * horisontalSpacing / 2 };            // if world origo should be at center use: {0.f + depth * horisontalSpacing / 2};
+
+    startX = vertexXStart;  //I use this to locate points
+    startZ = vertexZStart;
+
 
     //Loop to make the mesh from the values read from the heightmap (textureData)
 	//Double for-loop to make the depth and the width of the terrain in one go
@@ -79,6 +83,8 @@ void HeightMap::makeTerrain(unsigned char* textureData, int widthIn, int heightI
     //         |/|/|
     //          - -
     //Making the indices for this mesh:
+    mArrayWidth = width;
+    mArrayDepth = depth;
     for(int d{0}; d < depth-1; ++d)        //depth - 1 because we draw the last quad from depth - 1 and in negative z direction
     {
         for(int w{0}; w < width-1; ++w)    //width - 1 because we draw the last quad from width - 1 and in positive x direction
@@ -97,4 +103,89 @@ void HeightMap::makeTerrain(unsigned char* textureData, int widthIn, int heightI
 	//Calculating the normals for the mesh
     //Function not made yet:
     //calculateHeighMapNormals();
+}
+
+QVector3D HeightMap::locatePoint(QVector3D point){
+    float tempX = point.x();
+    float tempZ = point.z();
+
+    tempX = tempX - startX;
+    tempZ = tempZ - startZ;
+
+    tempZ = tempZ * -1;
+
+    tempX = tempX / 0.2f;
+    tempZ = tempZ / 0.2f;
+
+    tempX = floor(tempX);
+    tempZ = floor(tempZ);
+
+    QVector2D tempVert1 = QVector2D(mVertices.at(tempX + tempZ * mArrayWidth).x, mVertices.at(tempX + tempZ * mArrayWidth).z);
+    QVector2D tempVert2 = QVector2D(mVertices.at(tempX + tempZ * mArrayWidth + mArrayWidth + 1).x, mVertices.at(tempX + tempZ * mArrayWidth + mArrayWidth + 1).z);
+    QVector2D tempVert3 = QVector2D(mVertices.at(tempX + tempZ * mArrayWidth + mArrayWidth).x, mVertices.at(tempX + tempZ * mArrayWidth + mArrayWidth).z);
+    QVector2D tempVert4 = QVector2D(mVertices.at(tempX + tempZ * mArrayWidth).x, mVertices.at(tempX + tempZ * mArrayWidth).z);
+    QVector2D tempVert5 = QVector2D(mVertices.at(tempX + tempZ * mArrayWidth + 1).x, mVertices.at(tempX + tempZ * mArrayWidth + 1).z);
+    QVector2D tempVert6 = QVector2D(mVertices.at(tempX + tempZ * mArrayWidth + mArrayWidth + 1).x, mVertices.at(tempX + tempZ * mArrayWidth + mArrayWidth + 1).z);
+
+    QVector3D test1 = cartesianToBarycentric2(QVector2D(point.x(), point.z()), tempVert1, tempVert2, tempVert3);
+    QVector3D test2 = cartesianToBarycentric2(QVector2D(point.x(), point.z()), tempVert4, tempVert5, tempVert6);
+
+    QVector3D tempVert3D1 = QVector3D(  mVertices.at(tempX + tempZ * mArrayWidth).x,
+                                        mVertices.at(tempX + tempZ * mArrayWidth).y,
+                                        mVertices.at(tempX + tempZ * mArrayWidth).z);
+    QVector3D tempVert3D2 = QVector3D(  mVertices.at(tempX + tempZ * mArrayWidth + mArrayWidth + 1).x,
+                                        mVertices.at(tempX + tempZ * mArrayWidth + mArrayWidth + 1).y,
+                                        mVertices.at(tempX + tempZ * mArrayWidth + mArrayWidth + 1).z);
+    QVector3D tempVert3D3 = QVector3D(  mVertices.at(tempX + tempZ * mArrayWidth + mArrayWidth).x,
+                                        mVertices.at(tempX + tempZ * mArrayWidth + mArrayWidth).y,
+                                        mVertices.at(tempX + tempZ * mArrayWidth + mArrayWidth).z);
+
+    QVector3D tempVert3D4 = QVector3D(  mVertices.at(tempX + tempZ * mArrayWidth).x,
+                                        mVertices.at(tempX + tempZ * mArrayWidth).y,
+                                        mVertices.at(tempX + tempZ * mArrayWidth).z);
+    QVector3D tempVert3D5 = QVector3D(  mVertices.at(tempX + tempZ * mArrayWidth + 1).x,
+                                        mVertices.at(tempX + tempZ * mArrayWidth + 1).y,
+                                        mVertices.at(tempX + tempZ * mArrayWidth + 1).z);
+    QVector3D tempVert3D6 = QVector3D(  mVertices.at(tempX + tempZ * mArrayWidth + mArrayWidth + 1).x,
+                                        mVertices.at(tempX + tempZ * mArrayWidth + mArrayWidth + 1).y,
+                                        mVertices.at(tempX + tempZ * mArrayWidth + mArrayWidth + 1).z);
+
+    if(test1.x() >=0 && test1.y() >= 0 && test1.z() >= 0){
+        QVector3D returnVector = QVector3D(test1.x() * tempVert3D1.x() + test1.x() * tempVert3D2.x() + test1.x() * tempVert3D3.x(),
+                                           test1.y() * tempVert3D1.y() + test1.y() * tempVert3D2.y() + test1.y() * tempVert3D3.y(),
+                                           test1.z() * tempVert3D1.z() + test1.z() * tempVert3D2.z() + test1.z() * tempVert3D3.z());
+
+        return returnVector;
+    }
+    if(test2.x() >=0 && test2.y() >= 0 && test2.z() >= 0){
+        QVector3D returnVector = QVector3D(test2.x() * tempVert3D1.x() + test2.x() * tempVert3D2.x() + test2.x() * tempVert3D3.x(),
+                                           test2.y() * tempVert3D1.y() + test2.y() * tempVert3D2.y() + test2.y() * tempVert3D3.y(),
+                                           test2.z() * tempVert3D1.z() + test2.z() * tempVert3D2.z() + test2.z() * tempVert3D3.z());
+
+        return returnVector;
+    }
+
+    qDebug("uh oh");
+
+    QVector3D returnVector = QVector3D(test1.x() * tempVert3D1.x() + test1.x() * tempVert3D2.x() + test1.x() * tempVert3D3.x(),
+                                       test1.y() * tempVert3D1.y() + test1.y() * tempVert3D2.y() + test1.y() * tempVert3D3.y(),
+                                       test1.z() * tempVert3D1.z() + test1.z() * tempVert3D2.z() + test1.z() * tempVert3D3.z());
+    return returnVector;
+}
+
+QVector3D HeightMap::cartesianToBarycentric2(QVector2D p, QVector2D a, QVector2D b, QVector2D c)
+{
+    QVector2D v0 = { b.x() - a.x(), b.y() - a.y() };
+    QVector2D v1 = { c.x() - a.x(), c.y() - a.y() };
+    QVector2D v2 = { p.x() - a.x(), p.y() - a.y() };
+    float d00 = QVector2D::dotProduct(v0, v0);
+    float d01 = QVector2D::dotProduct(v0, v1);
+    float d11 = QVector2D::dotProduct(v1, v1);
+    float d20 = QVector2D::dotProduct(v2, v0);
+    float d21 = QVector2D::dotProduct(v2, v1);
+    float denom = d00 * d11 - d01 * d01;
+    float u = (d11 * d20 - d01 * d21) / denom;
+    float v = (d00 * d21 - d01 * d20) / denom;
+    float w = 1.0f - u - v;
+    return QVector3D( u, v, w);
 }

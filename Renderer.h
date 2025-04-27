@@ -5,6 +5,7 @@
 #include <vector>
 #include <unordered_map>
 #include "Camera.h"
+#include "HeightMap.h"
 #include "VisualObject.h"
 #include "Utilities.h"
 
@@ -119,6 +120,7 @@ private:
     class VulkanWindow* mVulkanWindow{ nullptr };
 
     VisualObject* mPlayer;
+    HeightMap* mHeightMap;
 
 	VkCommandBuffer beginTransientCommandBuffer();
 	void endTransientCommandBuffer(VkCommandBuffer commandBuffer);

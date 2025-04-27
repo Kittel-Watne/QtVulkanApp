@@ -5,6 +5,11 @@ VisualObject::VisualObject()
     mMatrix.setToIdentity();
 }
 
+void VisualObject::setHeight(float i){
+    float prevY = mMatrix.column(3).y();
+    mMatrix.translate(0, i - prevY, 0);
+}
+
 void VisualObject::move(float x, float y, float z)
 {
     mMatrix.translate(x, y, z);
@@ -24,6 +29,9 @@ void VisualObject::update()
 {
     move(mSpeedX, 0, mSpeedZ);
     //Barysentric changes to Y will be added here most likely
+}
+QVector3D VisualObject::getPosition(){
+    return mMatrix.column(3).toVector3D();
 }
 
 void VisualObject::setSpeedX(float newSpeed){

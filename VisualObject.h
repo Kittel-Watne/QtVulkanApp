@@ -15,6 +15,8 @@ public:
     void scale(float s);
     void rotate(float t, float x, float y, float z);
     void update();
+    void setHeight(float i);
+    QVector3D getPosition();
 
     void setSpeedX(float newSpeed);
     void setSpeedZ(float newSpeed);

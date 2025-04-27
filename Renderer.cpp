@@ -32,7 +32,11 @@ Renderer::Renderer(QVulkanWindow *w, bool msaa)
     mObjects.push_back((new TriangleSurface()));
     mObjects.push_back((new WorldAxis()));
     */
-	mObjects.push_back(new HeightMap());
+    mHeightMap = (new HeightMap());
+    mObjects.push_back(mHeightMap);
+
+    mHeightMap->makeTerrain("../../Assets/Hund.bmp");
+
     mObjects.push_back(new ObjMesh("suzanne.obj"));
     mObjects.back()->setDrawType(1);    //Changing drawtype so that suzanne is based on colors and not textures
 
@@ -51,7 +55,7 @@ Renderer::Renderer(QVulkanWindow *w, bool msaa)
     mObjects.at(1)->setName("Suzanne");
     mObjects.at(2)->setName("Player");
 
-    static_cast<HeightMap*>(mObjects.at(0))->makeTerrain("../../Assets/Hund.bmp");
+    //static_cast<HeightMap*>(mObjects.at(0))->makeTerrain("../../Assets/Hund.bmp");
 
     // **************************************
     // Legger inn objekter i map
@@ -329,8 +333,13 @@ void Renderer::startNextFrame()
     //Handeling input from keyboard and mouse is done in VulkanWindow
     //Has to be done each frame to get smooth movement
     mVulkanWindow->handleInput();
-    mCamera.update();               //input can have moved the camera
+    //mCamera.update();               //input can have moved the camera
+
     mPlayer->update();
+
+    QVector3D newPlayerPosition = mHeightMap->locatePoint(mPlayer->getPosition());
+    mPlayer->setHeight(newPlayerPosition.y());
+
 
     VkCommandBuffer commandBuffer = mWindow->currentCommandBuffer();
 
