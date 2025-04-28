@@ -338,7 +338,10 @@ void Renderer::startNextFrame()
     mPlayer->update();
 
     QVector3D newPlayerPosition = mHeightMap->locatePoint(mPlayer->getPosition());
-    mPlayer->setHeight(newPlayerPosition.y());
+    if (newPlayerPosition.x() != -100000000)
+    {
+        mPlayer->setHeight(newPlayerPosition.y());
+    }
 
 
     VkCommandBuffer commandBuffer = mWindow->currentCommandBuffer();

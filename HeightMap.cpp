@@ -152,24 +152,25 @@ QVector3D HeightMap::locatePoint(QVector3D point){
 
     if(test1.x() >=0 && test1.y() >= 0 && test1.z() >= 0){
         QVector3D returnVector = QVector3D(test1.x() * tempVert3D1.x() + test1.x() * tempVert3D2.x() + test1.x() * tempVert3D3.x(),
-                                           test1.y() * tempVert3D1.y() + test1.y() * tempVert3D2.y() + test1.y() * tempVert3D3.y(),
+                                           test1.x() * tempVert3D1.y() + test1.y() * tempVert3D2.y() + test1.z() * tempVert3D3.y(),
                                            test1.z() * tempVert3D1.z() + test1.z() * tempVert3D2.z() + test1.z() * tempVert3D3.z());
 
         return returnVector;
     }
     if(test2.x() >=0 && test2.y() >= 0 && test2.z() >= 0){
-        QVector3D returnVector = QVector3D(test2.x() * tempVert3D1.x() + test2.x() * tempVert3D2.x() + test2.x() * tempVert3D3.x(),
-                                           test2.y() * tempVert3D1.y() + test2.y() * tempVert3D2.y() + test2.y() * tempVert3D3.y(),
-                                           test2.z() * tempVert3D1.z() + test2.z() * tempVert3D2.z() + test2.z() * tempVert3D3.z());
-
+        QVector3D returnVector = QVector3D(test2.x() * tempVert3D4.x() + test2.x() * tempVert3D5.x() + test2.x() * tempVert3D6.x(),
+                                           test2.x() * tempVert3D4.y() + test2.y() * tempVert3D5.y() + test2.z() * tempVert3D6.y(),
+                                           test2.z() * tempVert3D4.z() + test2.z() * tempVert3D5.z() + test2.z() * tempVert3D6.z());
         return returnVector;
     }
 
     qDebug("uh oh");
 
-    QVector3D returnVector = QVector3D(test1.x() * tempVert3D1.x() + test1.x() * tempVert3D2.x() + test1.x() * tempVert3D3.x(),
+    QVector3D returnVector = QVector3D(-100000000,
                                        test1.y() * tempVert3D1.y() + test1.y() * tempVert3D2.y() + test1.y() * tempVert3D3.y(),
                                        test1.z() * tempVert3D1.z() + test1.z() * tempVert3D2.z() + test1.z() * tempVert3D3.z());
+
+    qDebug() << returnVector;
     return returnVector;
 }
 

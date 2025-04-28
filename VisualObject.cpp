@@ -28,7 +28,6 @@ void VisualObject::rotate(float t, float x, float y, float z)
 void VisualObject::update()
 {
     move(mSpeedX, 0, mSpeedZ);
-    //Barysentric changes to Y will be added here most likely
 }
 QVector3D VisualObject::getPosition(){
     return mMatrix.column(3).toVector3D();
